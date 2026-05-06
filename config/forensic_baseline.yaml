@@ -1,0 +1,25 @@
+# Step 1 baseline: DCT + ResNet18 forensic encoder
+# Implementation Guidelines V2 §10 (training config)
+
+seed: 42
+
+data:
+  csv_path: data/processed/forensic_3class.csv
+  dct_cache: data/processed/dct_cache
+
+model:
+  pretrained: true       # ImageNet weights for ResNet18
+  feat_dim: 768          # output of forensic encoder (matches v_semantic in Step 2)
+  dropout: 0.3
+
+train:
+  epochs: 50
+  batch_size: 64
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  num_workers: 4
+  out_dir: outputs/forensic_baseline
+  lr_step: 30            # StepLR: x0.1 at epoch 30
+  lr_gamma: 0.1
+  grad_clip: 1.0
+  early_stop_patience: 10  # epochs of no F1-macro improvement

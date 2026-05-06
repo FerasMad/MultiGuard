@@ -105,4 +105,19 @@ class FNDCLIP(nn.Module):
             "logits": logits,
             "clip_sim": clip_sim,
             "attn_weights": weights,
+            "v_semantic": weighted,
         }
+
+    def forward_semantic(self, image, bert_ids, bert_mask,
+                         clip_pixels, clip_ids, clip_mask):
+        """Run only up to the modality-attention output. Used by Stage 2 of the
+        full pipeline (Implementation Guidelines V2 §3 — frozen feature
+        extractor). Returns the [B, feat_dim] semantic vector with no gradient
+        flowing through the classifier head."""
+        image_feat = self.visual(image)
+        text_feat = self.text(bert_ids, bert_mask)
+        clip_fused, clip_sim = self.clip(clip_pixels, clip_ids, clip_mask)
+        clip_feat = self.clip_project(clip_fused)
+        clip_feat = clip_feat * clip_sim.unsqueeze(-1)
+        weighted, _ = self.attention(text_feat, image_feat, clip_feat)
+        return weighted
