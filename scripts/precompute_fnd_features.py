@@ -98,7 +98,16 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--csv", default="data/processed/forensic_3class.csv")
     p.add_argument("--cache-dir", default="data/processed/fnd_features")
-    p.add_argument("--ckpt", default="outputs/v1_ooc/best.pt")
+    p.add_argument(
+        "--ckpt",
+        default=None,
+        help="path to a trained FND-CLIP checkpoint to load before "
+             "extracting features. If omitted (the new default), FND-CLIP "
+             "is initialised from its pretrained sub-modules only "
+             "(BERT + ResNet50 ImageNet + frozen CLIP) and v_semantic "
+             "carries no task-specific signal. Pass an explicit path "
+             "ONLY if you understand the leakage risk — see HANDOFF.md.",
+    )
     p.add_argument("--feat-dim", type=int, default=512)
     p.add_argument("--bert", default="bert-base-uncased")
     p.add_argument("--clip", default="openai/clip-vit-base-patch32")
@@ -131,13 +140,20 @@ def main():
 
     print("Loading FND-CLIP...")
     fnd = FNDCLIP(feat_dim=args.feat_dim, num_classes=1)
-    ck = torch.load(args.ckpt, map_location="cpu", weights_only=False)
-    state = ck["model_state"]
-    fnd_state = fnd.state_dict()
-    compat = {k: v for k, v in state.items()
-              if k in fnd_state and fnd_state[k].shape == v.shape}
-    fnd.load_state_dict(compat, strict=False)
-    print(f"  loaded {len(compat)}/{len(fnd_state)} tensors from {args.ckpt}")
+    if args.ckpt is None or str(args.ckpt).lower() in ("", "none", "null"):
+        print("  no --ckpt provided -> using fresh FND-CLIP "
+              "(pretrained BERT/ResNet/CLIP only, no task signal). "
+              "This is the leak-free default.")
+    else:
+        ck = torch.load(args.ckpt, map_location="cpu", weights_only=False)
+        state = ck["model_state"]
+        fnd_state = fnd.state_dict()
+        compat = {k: v for k, v in state.items()
+                  if k in fnd_state and fnd_state[k].shape == v.shape}
+        fnd.load_state_dict(compat, strict=False)
+        print(f"  loaded {len(compat)}/{len(fnd_state)} tensors from {args.ckpt}")
+        print("  WARNING: loading a task-tuned checkpoint can leak labels "
+              "into v_semantic — see HANDOFF.md for details.")
     fnd = fnd.to(device).eval()
     for p_ in fnd.parameters():
         p_.requires_grad = False

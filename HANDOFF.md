@@ -30,11 +30,21 @@ stored at ~22 % lower JPEG quality than DGM4 origin/manipulated images
 (36.7 KB vs 47.5 / 45.8 KB on average), which DCT can shortcut on.
 
 **Action items before relying on these numbers:**
-1. Re-run Step 2 with FND-CLIP **uninitialized from any task checkpoint**
-   (i.e. drop `model.fnd_clip_ckpt` from `config/full_pipeline.yaml` and
-   pass a fresh `FNDCLIP(...)` so `v_semantic` comes only from
-   pretrained ImageNet/BERT/CLIP encoders, not a model that already saw
-   our test labels).
+1. ~~Re-run Step 2 with FND-CLIP **uninitialized from any task checkpoint**~~
+   **DONE** in commit on `feat/fix-v1ooc-leak`. `scripts/precompute_fnd_features.py`
+   now defaults to `--ckpt None` -> fresh FND-CLIP (pretrained sub-modules
+   only). `config/full_pipeline.yaml` documents `fnd_clip_ckpt: null`.
+   To regenerate leak-free `v_semantic` cache:
+
+       # Move or delete the existing leaky cache first
+       mv data/processed/fnd_features data/processed/fnd_features_leaky
+
+       # Recompute with fresh FND-CLIP
+       python scripts/precompute_fnd_features.py --cache-dir data/processed/fnd_features
+
+       # Retrain Step 2
+       python src/train_full_pipeline.py
+
 2. Re-encode all images at a uniform JPEG quality before DCT precompute,
    to remove the source-distribution shortcut.
 

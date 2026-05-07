@@ -15,7 +15,14 @@ models:
   clip: openai/clip-vit-base-patch32
 
 model:
-  fnd_clip_ckpt: outputs/v1_ooc/best.pt   # strongest existing FND-CLIP checkpoint
+  # NOTE: `fnd_clip_ckpt` is intentionally null. Loading a task-tuned
+  # FND-CLIP checkpoint here leaks labels into v_semantic (see
+  # HANDOFF.md, "v1_ooc feature leak"). The cached v_semantic vectors
+  # consumed by training are produced by `scripts/precompute_fnd_features.py`,
+  # which now defaults to a fresh FND-CLIP (pretrained BERT/ResNet/CLIP
+  # only, no task signal). To intentionally reproduce the leaky run for
+  # ablation, pass `--ckpt outputs/v1_ooc/best.pt` to that script.
+  fnd_clip_ckpt: null
   fnd_feat_dim: 512
   forensic_feat_dim: 512
   fusion_proj_dim: 512
