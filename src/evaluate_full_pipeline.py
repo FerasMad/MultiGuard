@@ -151,7 +151,18 @@ def main():
     p.add_argument("--fnd-cache", default="data/processed/fnd_features")
     p.add_argument("--mmfakebench", default="data/raw/MMFakeBench")
     p.add_argument("--mmfb-split", default="val")
-    p.add_argument("--fnd-clip-ckpt", default="outputs/v1_ooc/best.pt")
+    p.add_argument(
+        "--fnd-clip-ckpt",
+        default=None,
+        help="Optional FND-CLIP checkpoint to load before runtime "
+             "v_semantic computation on MMFakeBench. Default: None "
+             "(fresh FND-CLIP — pretrained sub-modules only). Loading "
+             "outputs/v1_ooc/best.pt here would re-introduce the v1_ooc "
+             "feature leak documented in HANDOFF.md, so it is opt-in. "
+             "Whichever choice you make here MUST match what was used "
+             "for `precompute_fnd_features.py` so test-split features "
+             "and MMFakeBench features come from the same encoder.",
+    )
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--out-dir", default="outputs/full_pipeline")
     p.add_argument("--skip-mmfb", action="store_true")
@@ -189,7 +200,8 @@ def main():
             print(f"  {k}: {v:.4f}")
         else:
             print(f"  {k}: {v}")
-    save_roc_curves(y, pb, out_dir / "test_roc.png")
+    save_roc_curves(y, pb, out_dir / "test_roc.png",
+                    title="Step 2 / Test split (one-vs-rest)")
     with open(out_dir / "test_metrics.yaml", "w") as f:
         yaml.safe_dump(test_m, f)
 
@@ -207,16 +219,29 @@ def main():
                   f"(class dist: {mmfb['label'].value_counts().to_dict()})")
 
             # Build a real FND-CLIP for runtime feature extraction.
+            # Default: fresh (no task ckpt) -> consistent with the leak-free
+            # precompute_fnd_features.py default. Pass --fnd-clip-ckpt
+            # explicitly to opt back into a task-tuned backbone (and accept
+            # the leakage trade-off documented in HANDOFF.md).
             print("  Loading FND-CLIP for on-the-fly v_semantic...")
             fnd_feat = cfg.get("model", {}).get("fnd_feat_dim", 512)
             fnd = FNDCLIP(feat_dim=fnd_feat, num_classes=1)
-            ck = torch.load(args.fnd_clip_ckpt, map_location="cpu",
-                            weights_only=False)
-            state = ck["model_state"]
-            fnd_state = fnd.state_dict()
-            compat = {k: v for k, v in state.items()
-                      if k in fnd_state and fnd_state[k].shape == v.shape}
-            fnd.load_state_dict(compat, strict=False)
+            ckpt_arg = args.fnd_clip_ckpt
+            if ckpt_arg is None or str(ckpt_arg).lower() in ("", "none", "null"):
+                print("    --fnd-clip-ckpt not provided -> fresh FND-CLIP "
+                      "(leak-free; matches the precompute default).")
+            else:
+                ck = torch.load(ckpt_arg, map_location="cpu",
+                                weights_only=False)
+                state = ck["model_state"]
+                fnd_state = fnd.state_dict()
+                compat = {k: v for k, v in state.items()
+                          if k in fnd_state and fnd_state[k].shape == v.shape}
+                fnd.load_state_dict(compat, strict=False)
+                print(f"    loaded {len(compat)}/{len(fnd_state)} tensors "
+                      f"from {ckpt_arg}")
+                print("    WARNING: loading a task-tuned checkpoint here "
+                      "can leak labels into v_semantic — see HANDOFF.md.")
             fnd = fnd.to(device).eval()
             for pp in fnd.parameters():
                 pp.requires_grad = False
@@ -238,7 +263,9 @@ def main():
                     print(f"  {k}: {v:.4f}")
                 else:
                     print(f"  {k}: {v}")
-            save_roc_curves(y, pb, out_dir / "mmfb_roc.png")
+            save_roc_curves(y, pb, out_dir / "mmfb_roc.png",
+                            title=f"Step 2 / MMFakeBench {args.mmfb_split} "
+                                  "(one-vs-rest, zero-shot)")
             with open(out_dir / "mmfb_metrics.yaml", "w") as f:
                 yaml.safe_dump(mmfb_m, f)
 

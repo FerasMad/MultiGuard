@@ -179,7 +179,14 @@ def metrics_block(y_true, y_pred, y_proba, labels=(0, 1, 2)):
     return out
 
 
-def save_roc_curves(y_true, y_proba, out_path, labels=(0, 1, 2)):
+def save_roc_curves(y_true, y_proba, out_path, labels=(0, 1, 2),
+                    title="ROC (one-vs-rest)"):
+    """Save a one-vs-rest ROC curve PNG.
+
+    `title` is the plot heading. Callers should pass something descriptive
+    of the model and split being evaluated (e.g. "Step 2 / Test split"
+    or "Step 1 / MMFakeBench transfer").
+    """
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -200,7 +207,7 @@ def save_roc_curves(y_true, y_proba, out_path, labels=(0, 1, 2)):
     plt.plot([0, 1], [0, 1], "k--", alpha=0.4)
     plt.xlabel("False Positive Rate")
     plt.ylabel("True Positive Rate")
-    plt.title("Forensic Baseline ROC (one-vs-rest)")
+    plt.title(title)
     plt.legend()
     plt.tight_layout()
     plt.savefig(out_path, dpi=120)
@@ -267,7 +274,8 @@ def main():
             print(f"  {k}: {v}")
         else:
             print(f"  {k}: {v:.4f}" if isinstance(v, float) else f"  {k}: {v}")
-    save_roc_curves(y, pb, out_dir / "test_roc.png")
+    save_roc_curves(y, pb, out_dir / "test_roc.png",
+                    title="Step 1 / Test split (one-vs-rest)")
     with open(out_dir / "test_metrics.yaml", "w") as f:
         yaml.safe_dump(test_m, f)
 
@@ -294,7 +302,9 @@ def main():
                     print(f"  {k}: {v}")
                 else:
                     print(f"  {k}: {v:.4f}" if isinstance(v, float) else f"  {k}: {v}")
-            save_roc_curves(y, pb, out_dir / "mmfb_roc.png")
+            save_roc_curves(y, pb, out_dir / "mmfb_roc.png",
+                            title=f"Step 1 / MMFakeBench {args.mmfb_split} "
+                                  "(one-vs-rest, zero-shot)")
             with open(out_dir / "mmfb_metrics.yaml", "w") as f:
                 yaml.safe_dump(mmfb_m, f)
 
