@@ -31,22 +31,32 @@ stored at ~22 % lower JPEG quality than DGM4 origin/manipulated images
 
 **Action items before relying on these numbers:**
 1. ~~Re-run Step 2 with FND-CLIP **uninitialized from any task checkpoint**~~
-   **DONE** in commit on `feat/fix-v1ooc-leak`. `scripts/precompute_fnd_features.py`
-   now defaults to `--ckpt None` -> fresh FND-CLIP (pretrained sub-modules
-   only). `config/full_pipeline.yaml` documents `fnd_clip_ckpt: null`.
-   To regenerate leak-free `v_semantic` cache:
+   **DONE.** `scripts/precompute_fnd_features.py` now defaults to
+   `--ckpt None` -> fresh FND-CLIP (pretrained sub-modules only).
+   `config/full_pipeline.yaml` documents `fnd_clip_ckpt: null`.
+2. ~~Re-encode all images at a uniform JPEG quality before DCT precompute~~
+   **DONE.** `scripts/precompute_dct.py` now re-encodes every image at a
+   uniform JPEG quality (default 85) before resize+DCT, neutralizing the
+   source-distribution shortcut.
 
-       # Move or delete the existing leaky cache first
-       mv data/processed/fnd_features data/processed/fnd_features_leaky
+To regenerate leak-free, JPEG-normalized caches and retrain end-to-end:
 
-       # Recompute with fresh FND-CLIP
-       python scripts/precompute_fnd_features.py --cache-dir data/processed/fnd_features
+```bash
+# 1. Discard the leaky / un-normalized caches
+mv data/processed/fnd_features data/processed/fnd_features_leaky 2>/dev/null
+rm -rf data/processed/dct_cache
 
-       # Retrain Step 2
-       python src/train_full_pipeline.py
+# 2. Recompute with fresh FND-CLIP and uniform JPEG quality
+python scripts/precompute_dct.py             # default --jpeg-quality 85
+python scripts/precompute_fnd_features.py    # default --ckpt None
 
-2. Re-encode all images at a uniform JPEG quality before DCT precompute,
-   to remove the source-distribution shortcut.
+# 3. Retrain Step 2
+python src/train_full_pipeline.py
+```
+
+To reproduce the original leaky behavior for an ablation comparison,
+pass `--ckpt outputs/v1_ooc/best.pt` to `precompute_fnd_features.py`
+and/or `--jpeg-quality 0` to `precompute_dct.py`.
 
 ---
 
