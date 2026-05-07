@@ -122,6 +122,13 @@ def test_mmfb_cross_modal_is_ooc():
     assert map_mmfakebench_to_3class("cross_modal_inconsistency", "Fake") == 2
 
 
+def test_mmfb_mismatch_is_ooc():
+    """The actual MMFakeBench v2 release uses 'mismatch' for OOC samples;
+    older docs called it 'cross_modal_inconsistency'. Both must map to OOC."""
+    assert map_mmfakebench_to_3class("mismatch", "Fake") == 2
+    assert map_mmfakebench_to_3class("Mismatch", "Fake") == 2  # case-insensitive
+
+
 def test_mmfb_textual_only_is_dropped():
     """Text-only fakes don't fit our 3 classes -> drop signal (-1)."""
     assert map_mmfakebench_to_3class("textual_veracity_distortion", "Fake") == -1

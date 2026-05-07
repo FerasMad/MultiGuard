@@ -7,6 +7,7 @@ confusion matrix. Saves a YAML metrics file plus a ROC curve PNG per evaluation.
 
 import argparse
 import hashlib
+import json
 import os
 import sys
 from pathlib import Path
@@ -32,39 +33,118 @@ LABEL_NAMES = {0: "Real", 1: "Manipulated", 2: "OOC"}
 def map_mmfakebench_to_3class(fake_cls: str, gt_answers: str) -> int:
     """Map MMFakeBench labels into our 3-class label space.
 
-    MMFakeBench fake_cls values include: 'original',
-    'textual_veracity_distortion', 'visual_veracity_distortion',
-    'cross_modal_inconsistency', and combinations. Mapping:
-      original (gt=True)               -> Real
-      visual_*                         -> Manipulated
-      cross_modal_*                    -> OOC
-      textual_only                     -> drop (not in our label space)
+    Actual MMFakeBench v2 release uses these `fake_cls` values:
+        original                       (real text + real image, aligned)
+        textual_veracity_distortion    (fake text, real image)
+        visual_veracity_distortion     (real text, fake image)
+        mismatch                       (real text + real image, mismatched
+                                        = "out of context")
+
+    Older docs / intermediate releases used 'cross_modal_inconsistency'
+    instead of 'mismatch' — both accepted here.
+
+    Mapping:
+        original                          -> Real (0)
+        contains 'visual'                 -> Manipulated (1)
+        contains 'mismatch' / 'cross_modal' / 'ooc'
+                                          -> OOC (2)
+        contains 'textual' (but no visual / mismatch / cross_modal)
+                                          -> drop (-1)
+        unknown / empty                   -> drop (-1)
     """
     if not isinstance(fake_cls, str):
-        fake_cls = "original"
-    if fake_cls == "original":
+        # Per existing behavior: missing fake_cls is treated as 'original'.
         return 0
-    visual = "visual" in fake_cls
-    cross = "cross_modal" in fake_cls
-    textual = "textual" in fake_cls
-    if visual:
+    fc = fake_cls.strip().lower()
+    if fc == "original":
+        return 0
+    if fc == "":
+        return -1
+    if "visual" in fc:
         return 1
-    if cross and not visual:
+    if "mismatch" in fc or "cross_modal" in fc or "ooc" in fc:
         return 2
-    if textual and not visual and not cross:
-        return -1  # drop
+    if "textual" in fc:
+        return -1
     return -1
 
 
 def load_mmfakebench(root, split="val"):
     """Build a (image_path, label) DataFrame for MMFakeBench transfer eval.
 
-    Reads the cached HF dataset directly from its .arrow file via pyarrow —
-    `load_from_disk` chokes on this particular cache layout (no state.json).
+    Supports two on-disk layouts:
+
+    1. **Raw HF download** (current default):
+           <root>/MMFakeBench_<split>.json
+           <root>/MMFakeBench_<split>/<...image files...>
+                                       (extracted from MMFakeBench_<split>.zip)
+
+    2. **Legacy HF datasets cache**:
+           <root>/liuxuannan___mm_fake_bench/MMFakeBench_<split>/
+                  <version>/<hash>/dataset.arrow
+
+    The raw JSON layout is preferred; the .arrow path is kept as a
+    fallback so older local caches still work without re-downloading.
+
+    Args:
+        root: filesystem path to the MMFakeBench root
+            (typically `data/raw/MMFakeBench`).
+        split: one of `{"val", "test"}`.
+
+    Returns:
+        DataFrame with columns
+        `sample_id, image_path, label, fake_cls, text`.
+        Rows whose `fake_cls` doesn't fit the V2 3-class taxonomy
+        (e.g. textual-only fakes) are dropped.
+
+    Raises:
+        FileNotFoundError: if neither layout is present under `root`.
     """
-    import pyarrow as pa
     root = Path(root)
+    json_path = root / f"MMFakeBench_{split}.json"
+    if json_path.exists():
+        return _load_mmfakebench_json(root, split, json_path)
+    return _load_mmfakebench_arrow(root, split)
+
+
+def _load_mmfakebench_json(root: Path, split: str, json_path: Path) -> pd.DataFrame:
+    """Read the raw HF download (JSON next to extracted images folder)."""
+    with open(json_path, encoding="utf-8") as f:
+        items = json.load(f)
+    images_root = root / f"MMFakeBench_{split}"
+
+    rows = []
+    for idx, item in enumerate(items):
+        rel = item["image_path"].lstrip("/")
+        img = images_root / rel
+        label = map_mmfakebench_to_3class(
+            item.get("fake_cls"), item.get("gt_answers"),
+        )
+        if label < 0:
+            continue
+        rows.append({
+            "sample_id": f"mmfb_{split}_{idx}",
+            "image_path": str(img),
+            "label": label,
+            "fake_cls": item.get("fake_cls", "original"),
+            "text": item.get("text", ""),
+        })
+    return pd.DataFrame(rows)
+
+
+def _load_mmfakebench_arrow(root: Path, split: str) -> pd.DataFrame:
+    """Legacy: read from the HuggingFace `datasets` on-disk cache."""
+    import pyarrow as pa
+
     hf_path = root / "liuxuannan___mm_fake_bench" / f"MMFakeBench_{split}"
+    if not hf_path.exists():
+        raise FileNotFoundError(
+            f"No MMFakeBench data found under {root}. Expected either:\n"
+            f"  {root}/MMFakeBench_{split}.json + extracted "
+            f"MMFakeBench_{split}/  (raw HF download — preferred), or\n"
+            f"  {root}/liuxuannan___mm_fake_bench/MMFakeBench_{split}/"
+            f"<v>/<hash>/*.arrow  (legacy datasets cache)."
+        )
     arrow_file = None
     for v in hf_path.iterdir():
         if v.is_dir():
@@ -87,8 +167,9 @@ def load_mmfakebench(root, split="val"):
     for idx, item in enumerate(items):
         rel = item["image_path"].lstrip("/")
         img = images_root / rel
-        label = map_mmfakebench_to_3class(item.get("fake_cls"),
-                                          item.get("gt_answers"))
+        label = map_mmfakebench_to_3class(
+            item.get("fake_cls"), item.get("gt_answers"),
+        )
         if label < 0:
             continue
         rows.append({
