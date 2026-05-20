@@ -1,9 +1,6 @@
-"""Train the full Step-2 pipeline (V2 §9-11):
-frozen FND-CLIP + trainable ResNet18-forensic + cross-attention fusion + MLP.
+"""V2 training: CLIP + DCT/ResNet18 forensic + cross-attention + MLP.
 
-Loss = main_CE(main_logits, label) + 0.1 * aux_CE(aux_logits, aux_label)
-       where aux_label = 1 if main_label == Manipulated else 0
-       (binary "fake image vs real image" — see full_pipeline.py for rationale)
+CLIP features and DCT maps are precomputed and loaded from disk.
 """
 
 import argparse
@@ -26,9 +23,8 @@ from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from models.fnd_clip import FNDCLIP
-from models.full_pipeline import FullPipeline
-from precompute_fnd_features import feature_hash
+from models.clip_forensic_pipeline import ClipForensicPipeline
+from precompute_clip_features import feature_hash
 
 
 def pick_device():
@@ -43,21 +39,16 @@ def path_hash(image_path: str) -> str:
     return hashlib.md5(os.path.abspath(image_path).encode("utf-8")).hexdigest()
 
 
-# Strict V2 §6: aux is 3-class so aux_label == main_label.
 def main_label_to_aux(label: int) -> int:
-    return int(label)
+    return 1 if int(label) == 1 else 0
 
 
-class CachedFeatureDataset(Dataset):
-    """Loads precomputed v_semantic + DCT map + labels. No FND-CLIP, no BERT,
-    no CLIP — those features are already cached on disk. This is what makes
-    each training epoch fast enough to run 50 of them on MPS."""
-
-    def __init__(self, df, dct_cache, fnd_cache, feat_dim=512):
+class CachedDataset(Dataset):
+    def __init__(self, df, dct_cache, clip_cache, clip_dim=1024):
         self.df = df.reset_index(drop=True)
         self.dct_cache = Path(dct_cache)
-        self.fnd_cache = Path(fnd_cache)
-        self.feat_dim = feat_dim
+        self.clip_cache = Path(clip_cache)
+        self.clip_dim = clip_dim
 
     def __len__(self):
         return len(self.df)
@@ -67,7 +58,6 @@ class CachedFeatureDataset(Dataset):
         path = row["image_path"]
         text = str(row["text"])
 
-        # DCT map.
         dpt = self.dct_cache / f"{path_hash(path)}.pt"
         if dpt.exists():
             dct = torch.load(dpt, weights_only=False).float()
@@ -76,66 +66,25 @@ class CachedFeatureDataset(Dataset):
         else:
             dct = torch.zeros(1, 224, 224)
 
-        # Precomputed FND-CLIP semantic vector.
-        fpt = self.fnd_cache / f"{feature_hash(text, path)}.pt"
-        if fpt.exists():
-            v_semantic = torch.load(fpt, weights_only=False).float()
+        cpt = self.clip_cache / f"{feature_hash(text, path)}.pt"
+        if cpt.exists():
+            v_sem = torch.load(cpt, weights_only=False).float()
         else:
-            v_semantic = torch.zeros(self.feat_dim)
+            v_sem = torch.zeros(self.clip_dim)
 
         main_label = int(row["label"])
-        aux_label = main_label_to_aux(main_label)
-
         return {
             "dct": dct,
-            "v_semantic": v_semantic,
+            "v_semantic": v_sem,
             "main_label": torch.tensor(main_label, dtype=torch.long),
-            "aux_label": torch.tensor(aux_label, dtype=torch.long),
+            "aux_label": torch.tensor(main_label_to_aux(main_label),
+                                      dtype=torch.long),
         }
 
 
 def collate(batch):
     keys = list(batch[0].keys())
     return {k: torch.stack([b[k] for b in batch]) for k in keys}
-
-
-def build_model(cfg, device):
-    """Build the trainable parts of the pipeline. We DON'T instantiate the
-    full FND-CLIP here because v_semantic is precomputed and cached — only
-    the trainable head needs to live in memory during training. We pass a
-    minimal FND-CLIP-shaped object that the FullPipeline ignores when
-    v_semantic is provided directly. (See FullPipeline.forward.)"""
-
-    fnd_feat = cfg["model"].get("fnd_feat_dim", 512)
-
-    class _NoOpFND(nn.Module):
-        """Placeholder so FullPipeline can hold a reference but never run it."""
-        def __init__(self):
-            super().__init__()
-            self._buf = nn.Parameter(torch.zeros(1), requires_grad=False)
-        def forward_semantic(self, *a, **k):
-            raise RuntimeError("v_semantic must be precomputed and passed in")
-        def eval(self):
-            return self
-        def train(self, mode=True):
-            return self
-
-    pipeline = FullPipeline(
-        fnd_clip=_NoOpFND(),
-        fnd_clip_feat_dim=fnd_feat,
-        forensic_feat_dim=cfg["model"].get("forensic_feat_dim", 512),
-        fusion_proj_dim=cfg["model"].get("fusion_proj_dim", 512),
-        num_classes=3,
-        fusion_heads=cfg["model"].get("fusion_heads", 8),
-        fusion_dropout=cfg["model"].get("fusion_dropout", 0.1),
-        forensic_dropout=cfg["model"].get("forensic_dropout", 0.3),
-    ).to(device)
-
-    n_total = sum(p.numel() for p in pipeline.parameters())
-    n_train = sum(p.numel() for p in pipeline.parameters() if p.requires_grad)
-    print(f"Params: total={n_total:,}  trainable={n_train:,}  "
-          f"(FND-CLIP not loaded — using cached v_semantic)")
-    return pipeline
 
 
 def train_one_epoch(model, loader, optimizer, criterion, device,
@@ -190,7 +139,7 @@ def evaluate(model, loader, criterion, device):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--config", default="config/full_pipeline.yaml")
+    p.add_argument("--config", default="config/clip_forensic.yaml")
     p.add_argument("--max-epochs", type=int, default=None)
     p.add_argument("--limit", type=int, default=None)
     args = p.parse_args()
@@ -214,12 +163,14 @@ def main():
         val_df = val_df.head(args.limit)
     print(f"Splits: train={len(train_df)}, val={len(val_df)}")
 
-    train_set = CachedFeatureDataset(
-        train_df, cfg["data"]["dct_cache"], cfg["data"]["fnd_cache"],
-        feat_dim=cfg["model"].get("fnd_feat_dim", 512))
-    val_set = CachedFeatureDataset(
-        val_df, cfg["data"]["dct_cache"], cfg["data"]["fnd_cache"],
-        feat_dim=cfg["model"].get("fnd_feat_dim", 512))
+    train_set = CachedDataset(train_df,
+                              cfg["data"]["dct_cache"],
+                              cfg["data"]["clip_cache"],
+                              clip_dim=cfg["model"].get("clip_dim", 1024))
+    val_set = CachedDataset(val_df,
+                            cfg["data"]["dct_cache"],
+                            cfg["data"]["clip_cache"],
+                            clip_dim=cfg["model"].get("clip_dim", 1024))
 
     nw = cfg["train"].get("num_workers", 2)
     train_loader = DataLoader(train_set, batch_size=cfg["train"]["batch_size"],
@@ -231,9 +182,22 @@ def main():
                             collate_fn=collate,
                             persistent_workers=nw > 0)
 
-    model = build_model(cfg, device)
+    model = ClipForensicPipeline(
+        clip_dim=cfg["model"].get("clip_dim", 1024),
+        forensic_feat_dim=cfg["model"].get("forensic_feat_dim", 768),
+        fusion_proj_dim=cfg["model"].get("fusion_proj_dim", 512),
+        num_classes=3,
+        fusion_heads=cfg["model"].get("fusion_heads", 8),
+        fusion_dropout=cfg["model"].get("fusion_dropout", 0.1),
+        forensic_dropout=cfg["model"].get("forensic_dropout", 0.3),
+    ).to(device)
+
+    n_total = sum(p.numel() for p in model.parameters())
+    n_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Params total={n_total:,}  trainable={n_train:,}")
+
     criterion = nn.CrossEntropyLoss()
-    optimizer = Adam([p for p in model.parameters() if p.requires_grad],
+    optimizer = Adam(model.parameters(),
                      lr=cfg["train"]["lr"],
                      weight_decay=cfg["train"].get("weight_decay", 1e-4))
     scheduler = StepLR(optimizer,
@@ -261,8 +225,7 @@ def main():
         lr = optimizer.param_groups[0]["lr"]
         print(f"Epoch {epoch:3d} | lr={lr:.2e} | train_loss={tr_loss:.4f} | "
               f"val_loss={val_metrics['loss']:.4f} | "
-              f"val_f1_macro={val_metrics['f1_macro']:.4f} | "
-              f"{elapsed:.1f}s")
+              f"val_f1_macro={val_metrics['f1_macro']:.4f} | {elapsed:.1f}s")
         history.append({"epoch": epoch, "train_loss": tr_loss,
                         **val_metrics, "lr": lr, "seconds": elapsed})
 

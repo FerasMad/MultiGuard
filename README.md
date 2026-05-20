@@ -1,38 +1,121 @@
-# Multimodal fake-news detection — V1
+# Multimodal Fake-News Detection
 
-V1 of my graduation project. Binary out-of-context detector: given
-(text, image), predict whether the image matches the text.
+Graduation project: detecting fake news across three categories using
+multimodal (text + image) signals and pixel-level forensic analysis.
 
-Model is FND-CLIP (Zhou et al., ICME 2023) — ResNet-50 + BERT + frozen
-CLIP, fused with modality attention. Code under `src/`, configs under
-`config/`, runnable scripts under `scripts/`.
+**3-class task:** Real | Manipulated (face-swap/attribute) | Out-of-Context (OOC)
 
-## Run
+## Project structure
 
 ```
-pip install -r requirements-v1.txt
+config/             YAML configs for each experiment
+scripts/            Data building, feature precomputation, evaluation helpers
+src/
+  models/           Model definitions (FND-CLIP, forensic baseline, full pipeline, CLIP-forensic)
+  train*.py         Training scripts
+  evaluate*.py      Evaluation scripts
+  dataset.py        Dataset / dataloader
+tests/              Smoke and invariant tests
+outputs/            Experiment results (metrics, ROC curves, training history)
+```
+
+## Phases
+
+### Phase 1 -- FND-CLIP binary OOC detector
+
+Binary classifier: OOC vs not-OOC.  
+Model: FND-CLIP (Zhou et al., ICME 2023) -- ResNet-50 + BERT + frozen CLIP with modality attention.
+
+| Metric | Value |
+|--------|-------|
+| Accuracy | 0.946 |
+| F1 | 0.945 |
+| AUC | 0.987 |
+
+Config: `config/v1_ooc.yaml`  
+Results: `outputs/v1_results/`
+
+### Phase 2 -- 3-class forensic fusion
+
+Extends Phase 1 with pixel-level forensic features (DCT + ResNet18) fused
+with semantic features via bidirectional cross-attention.
+
+**Step 1: Forensic baseline** (DCT + ResNet18 alone)  
+Config: `config/forensic_baseline.yaml`
+
+**Step 2: Full fusion pipeline** (FND-CLIP semantic + forensic cross-attention)  
+Config: `config/full_pipeline.yaml`
+
+**CLIP-Forensic variant** (CLIP features + forensic cross-attention)  
+Config: `config/clip_forensic.yaml`
+
+#### Results (in-distribution test set, n=2,700)
+
+| Model | Accuracy | F1-macro | AUC-ROC |
+|-------|----------|----------|---------|
+| Forensic baseline | 0.479 | 0.475 | 0.677 |
+| CLIP-Forensic | 0.693 | 0.699 | 0.862 |
+| **Full pipeline (clean)** | **0.863** | **0.864** | **0.971** |
+
+#### Transfer (MMFakeBench, zero-shot)
+
+| Model | Accuracy | F1-macro |
+|-------|----------|---------|
+| Forensic baseline | 0.175 | 0.173 |
+| CLIP-Forensic | 0.543 | 0.289 |
+| **Full pipeline (clean)** | **0.643** | **0.308** |
+
+The "clean" pipeline uses leak-free FND-CLIP features and uniform JPEG
+normalization. See `HANDOFF.md` for details on the data-leak fix.
+
+## Quick start
+
+```bash
+pip install -r requirements.txt
+
+# Phase 1
 python scripts/build_balanced_dataset.py
 python -m src.train --config config/v1_ooc.yaml
 python scripts/fndclip_ooc_test_eval.py
+
+# Phase 2 (full pipeline, end-to-end)
+bash scripts/run_phase2_pipeline.sh
+# or step by step:
+python scripts/build_forensic_3class_clean.py
+python scripts/precompute_dct.py
+python scripts/precompute_fnd_features.py
+python src/train_full_pipeline.py
+python src/evaluate_full_pipeline.py --checkpoint outputs/full_pipeline_clean/best.pt
 ```
 
-Data (DGM4, NewsCLIPpings) and checkpoints are not in the repo.
+## Dataset build variants
 
-## Results
+Four dataset construction scripts exist for different experimental conditions:
 
-Test set n=1,800. Accuracy 0.9456, F1 0.9449, AUC 0.9874.
+| Script | Real source | Notes |
+|--------|-------------|-------|
+| `build_forensic_3class.py` | DGM4 origin | Original; same-source Real/Manipulated |
+| `build_forensic_3class_v2.py` | NewsCLIPpings genuine | Matches OOC image distribution |
+| `build_forensic_3class_clean.py` | NewsCLIPpings bank (excl. v1 overlap) | Leak-free Phase 1/2 split |
+| `build_forensic_3class_strict.py` | NewsCLIPpings bank (random) | Follows PDF literally (has JPEG shortcut) |
 
-- `outputs/v1_results/V1_OOC_FINAL.md` — full write-up (training curves,
-  confusion matrix, LLaVA-1.5-7B zero-shot comparison).
-- `outputs/v1_results/fndclip_ooc_predictions.csv` — per-sample predictions.
-- `outputs/v1_results/fndclip_ooc_predictions_metrics.yaml` — metrics dump.
-- `outputs/v1_results/v1_ooc_comparison.md` — head-to-head vs LLaVA.
-- `outputs/v1_results/diagrams/` — figures.
+The **clean** variant is the recommended default.
 
-To regenerate the metrics YAMLs:
+## Data and checkpoints
 
-```
-python scripts/fndclip_ooc_test_eval.py       # FND-CLIP on the test split
-python scripts/llava_ooc_eval.py --split test # LLaVA zero-shot baseline
-python scripts/compare_fndclip_llava.py       # head-to-head report
-```
+Not in the repo (too large). Download locally:
+
+| Data | Source |
+|------|--------|
+| DGM4 | `rshaojimmy/DGM4` on HuggingFace |
+| NewsCLIPpings | NewsCLIPpings test split |
+| MMFakeBench | `liuxuannan/MMFakeBench` on HuggingFace |
+
+Checkpoints (`.pt`) and precomputed caches are regenerated by the scripts above.
+
+## Next: Phase 3 (V3) — 5-class three-signal fusion
+
+V3 extends the pipeline to 5 classes (Real, OOC, Manipulated, AI-Text,
+Double Fake) by adding a third signal: text forensics via Qwen2-7B hidden
+states. The full V3 implementation guide, execution checklist, and code
+mapping are in **`HANDOFF.md`**.

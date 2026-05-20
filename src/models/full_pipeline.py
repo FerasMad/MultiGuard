@@ -119,14 +119,8 @@ class FullPipeline(nn.Module):
             pretrained=True, out_dim=forensic_feat_dim,
             dropout=forensic_dropout,
         )
-        # Auxiliary classifier on the forensic feature (training only).
-        # BINARY (real image / fake image) — not 3-class. The forensic
-        # encoder sees only DCT pixel features so it cannot distinguish OOC
-        # from Real (both have real images). Forcing 3-class here was the
-        # cause of the Step-1 baseline plateauing at F1=0.49. Binary keeps
-        # the auxiliary task aligned with what the encoder can actually see;
-        # the 3-class job lives at the fusion head where all signals are
-        # present. (Deviation from V2 §6.)
+        # Aux: binary (real image / fake image). Forensic sees only pixels;
+        # OOC samples have real images so they share label 0 with Real.
         self.aux_classifier = nn.Linear(forensic_feat_dim, 2)
 
         # Cross-attention fusion + MLP head.

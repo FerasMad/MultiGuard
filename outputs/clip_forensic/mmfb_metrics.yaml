@@ -1,0 +1,22 @@
+accuracy: 0.5425
+auc_roc_macro: .nan
+confusion_matrix:
+- - 207
+  - 32
+  - 61
+- - 62
+  - 10
+  - 28
+- - 0
+  - 0
+  - 0
+f1_macro: 0.28947911251928676
+manipulated_f1: 0.14084507042253522
+manipulated_precision: 0.23809523809523808
+manipulated_recall: 0.1
+ooc_f1: 0.0
+ooc_precision: 0.0
+ooc_recall: 0.0
+real_f1: 0.7275922671353251
+real_precision: 0.7695167286245354
+real_recall: 0.69

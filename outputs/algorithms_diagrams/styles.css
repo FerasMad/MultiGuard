@@ -1,0 +1,292 @@
+/* ============================================================
+   Algorithms — Figure styles
+   Academic paper aesthetic: white bg, thin borders, soft pastels,
+   IBM Plex / Source Sans / Source Serif typography
+   ============================================================ */
+
+:root {
+  --ink:           #1a1a1a;
+  --ink-soft:      #4a4a48;
+  --muted:         #7a7a76;
+  --hairline:      #e3e1dc;
+  --paper:         #ffffff;
+
+  /* Arrow + neutral node */
+  --arrow:         #8e8d87;
+  --neutral-fill:  #fafaf8;
+  --neutral-bd:    #c9c7c2;
+
+  /* Soft pastel families */
+  --blue-fill:     #eef3fa;   /* preprocessing / transforms */
+  --blue-bd:       #a8bfdb;
+  --blue-ink:      #2f5783;
+
+  --lavender-fill: #f1ecf7;   /* neural models / encoders */
+  --lavender-bd:   #b8a8d0;
+  --lavender-ink:  #5e4a82;
+
+  --mint-fill:     #ecf4ee;   /* external services / APIs */
+  --mint-bd:       #a3c4ac;
+  --mint-ink:      #3f6b4d;
+
+  --peach-fill:    #faf0e6;   /* feature outputs */
+  --peach-bd:      #dab39a;
+  --peach-ink:     #8a5a35;
+
+  --cream-fill:    #f7f1e0;   /* probabilities / scores */
+  --cream-bd:      #d2bf8e;
+  --cream-ink:     #806c3a;
+
+  --rose-fill:     #f7ecef;   /* fusion / aggregation */
+  --rose-bd:       #d0a8b0;
+  --rose-ink:      #864956;
+}
+
+/* ---------- Page ---------- */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #f4f3ef;
+  color: var(--ink);
+  font-family: 'Source Sans 3', 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.paper {
+  max-width: 1240px;
+  margin: 32px auto;
+  padding: 56px 64px 80px;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 12px 40px rgba(0,0,0,.04);
+}
+
+.paper-header {
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 24px;
+  margin-bottom: 40px;
+}
+.paper-header .eyebrow {
+  font: 500 11px/1 'IBM Plex Mono', ui-monospace, monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.paper-header h1 {
+  font-family: 'Source Serif 4', 'IBM Plex Serif', Georgia, serif;
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 0 0 6px;
+  letter-spacing: -.005em;
+}
+.paper-header p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 15px;
+  max-width: 64ch;
+}
+
+/* ---------- Figure ---------- */
+
+figure.diag {
+  margin: 0 0 56px;
+  padding: 0;
+  page-break-inside: avoid;
+}
+figure.diag + figure.diag {
+  border-top: 1px solid var(--hairline);
+  padding-top: 40px;
+}
+
+figure.diag .canvas {
+  position: relative;
+  margin: 0 auto;
+  /* width/height set inline per figure */
+}
+
+figure.diag .canvas svg.arrows {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+figcaption {
+  margin-top: 18px;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  text-align: left;
+  max-width: 92%;
+}
+figcaption .figlabel {
+  font-weight: 600;
+  color: var(--ink);
+  font-style: normal;
+}
+figcaption em {
+  font-style: italic;
+}
+
+/* ---------- Node base ---------- */
+
+.node {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  background: var(--paper);
+  border: 1.25px solid var(--neutral-bd);
+  border-radius: 9px;
+  font: 500 13.5px/1.15 'Source Sans 3', system-ui, sans-serif;
+  color: var(--ink);
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.node .ico {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  display: inline-block;
+}
+.node .ico svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.node .sub {
+  font: 400 11.5px/1 'IBM Plex Mono', ui-monospace, monospace;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+/* Variants */
+.node--input {
+  background: var(--neutral-fill);
+  border: 1.25px dashed var(--neutral-bd);
+  color: var(--ink-soft);
+}
+.node--transform {
+  background: var(--blue-fill);
+  border-color: var(--blue-bd);
+  color: var(--blue-ink);
+}
+.node--model {
+  background: var(--lavender-fill);
+  border-color: var(--lavender-bd);
+  color: var(--lavender-ink);
+}
+.node--api {
+  background: var(--mint-fill);
+  border-color: var(--mint-bd);
+  color: var(--mint-ink);
+}
+.node--feature {
+  background: var(--peach-fill);
+  border-color: var(--peach-bd);
+  color: var(--peach-ink);
+}
+.node--prob {
+  background: var(--cream-fill);
+  border-color: var(--cream-bd);
+  color: var(--cream-ink);
+  border-radius: 999px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.node--fuse {
+  background: var(--rose-fill);
+  border-color: var(--rose-bd);
+  color: var(--rose-ink);
+}
+.node--classifier {
+  background: var(--peach-fill);
+  border-color: var(--peach-bd);
+  color: var(--peach-ink);
+}
+.node--class {
+  background: var(--paper);
+  border-color: var(--neutral-bd);
+  color: var(--ink);
+  font-size: 12.5px;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+/* Tiny merge dot used at fork/join points */
+.dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--arrow);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+/* In-canvas group label (e.g., "Branch 1") */
+.group-label {
+  position: absolute;
+  font: 500 10.5px/1 'IBM Plex Mono', ui-monospace, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Region / dotted background grouping for figure 5 */
+.region {
+  position: absolute;
+  border: 1px dashed #d6d4cd;
+  border-radius: 14px;
+  background: #fafaf710;
+  pointer-events: none;
+}
+.region-title {
+  position: absolute;
+  font: 500 10.5px/1 'IBM Plex Mono', ui-monospace, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: white;
+  padding: 0 6px;
+}
+
+/* Arrow label (above an arrow path) — white halo so it stays
+   readable when it crosses node borders or other elements */
+.alabel {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  fill: var(--muted);
+  paint-order: stroke fill;
+  stroke: #ffffff;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* Annotation under a feature/prob output */
+.annot {
+  position: absolute;
+  font: 400 11px/1.2 'IBM Plex Mono', ui-monospace, monospace;
+  color: var(--muted);
+  white-space: nowrap;
+  transform: translateY(2px);
+}
+
+/* ---------- Print ---------- */
+
+@media print {
+  body { background: white; }
+  .paper { box-shadow: none; border: 0; margin: 0; padding: 24px; max-width: none; }
+  figure.diag { break-inside: avoid; }
+}

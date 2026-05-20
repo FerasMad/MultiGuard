@@ -1,0 +1,29 @@
+# V2 pipeline: CLIP (frozen, off-the-shelf) + DCT/ResNet18 + cross-attention + MLP
+
+seed: 42
+
+data:
+  csv_path: data/processed/forensic_3class_v2.csv
+  dct_cache: data/processed/dct_cache
+  clip_cache: data/processed/clip_features
+
+model:
+  clip_dim: 1024              # 512 image + 512 text from CLIP ViT-B/32
+  forensic_feat_dim: 768      # PDF spec
+  fusion_proj_dim: 512        # PDF spec
+  fusion_heads: 8
+  fusion_dropout: 0.1
+  forensic_dropout: 0.3
+
+train:
+  epochs: 50
+  batch_size: 64
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  num_workers: 4
+  out_dir: outputs/clip_forensic
+  lr_step: 30
+  lr_gamma: 0.1
+  grad_clip: 1.0
+  early_stop_patience: 10
+  aux_weight: 0.1

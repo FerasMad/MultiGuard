@@ -1,0 +1,22 @@
+accuracy: 0.7148148148148148
+auc_roc_macro: 0.8709335390946502
+confusion_matrix:
+- - 484
+  - 412
+  - 4
+- - 324
+  - 560
+  - 16
+- - 4
+  - 10
+  - 886
+f1_macro: 0.7139020030214501
+manipulated_f1: 0.5951115834218916
+manipulated_precision: 0.570264765784114
+manipulated_recall: 0.6222222222222222
+ooc_f1: 0.9811738648947951
+ooc_precision: 0.977924944812362
+ooc_recall: 0.9844444444444445
+real_f1: 0.5654205607476636
+real_precision: 0.5960591133004927
+real_recall: 0.5377777777777778

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Algorithms — Figures (Multimodal Misinformation Detection)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="paper">
+
+  <header class="paper-header">
+    <div class="eyebrow">Chapter 3 · Algorithms</div>
+    <h1>Figures: Branch architectures, fact-checking module, and overall system</h1>
+    <p>The figures below illustrate the three modality-specific detection branches, the fact-checking module, the overall fusion architecture, and the training procedure used to build the system.</p>
+  </header>
+
+  <!-- Figures get injected here -->
+  <main id="figures"></main>
+
+</div>
+
+<!-- ==================================================================
+     Icon library — small, line-style, 1.6px stroke, currentColor
+     ================================================================== -->
+<script>
+const ICONS = {
+  text: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14M5 12h14M5 19h9"/></svg>`,
+  doc:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 12h6M10 16h5"/></svg>`,
+  image:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M5 17.5l4-4 3 3 3-3 4 4"/></svg>`,
+  ai:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6.5" width="11" height="11" rx="1.6"/><circle cx="10" cy="10" r=".9"/><circle cx="14" cy="14" r=".9"/><path d="M3 9h3.5M3 15h3.5M17.5 9H21M17.5 15H21M9 3v3.5M15 3v3.5M9 17.5V21M15 17.5V21"/></svg>`,
+  layers:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg>`,
+  wave: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c1.5 0 2-5 3.5-5s2 10 3.5 10 2-8 3.5-8 2 5 3.5 5 1.5-2 1.5-2"/></svg>`,
+  palette:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="8" cy="9" r="1.1"/><circle cx="14" cy="7.5" r="1.1"/><circle cx="16.5" cy="13" r="1.1"/><circle cx="10" cy="16" r="1.1"/></svg>`,
+  network:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="1.5"/><circle cx="5" cy="18" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="6" r="1.5"/><circle cx="19" cy="18" r="1.5"/><path d="M6.4 6.8l4.4 4.4M6.4 17.2l4.4-4.4M13.2 11.2l4.4-4.4M13.2 12.8l4.4 4.4"/></svg>`,
+  link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 14.5l5-5"/><path d="M14 6l1.2-1.2a3.8 3.8 0 0 1 5.4 5.4L19 12"/><path d="M10 18l-1.2 1.2a3.8 3.8 0 0 1-5.4-5.4L5 12"/></svg>`,
+  shield:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5.5c0 4.6-3.3 7.9-8 9.5-4.7-1.6-8-4.9-8-9.5V6z"/><path d="M9 12l2 2 4-4.2"/></svg>`,
+  cloud:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 18h9a4 4 0 0 0 .8-7.9A6 6 0 0 0 6 9.6 4.3 4.3 0 0 0 7.5 18z"/></svg>`,
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.2"/><path d="M20 20l-4.4-4.4"/></svg>`,
+  scale:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M5 20h14"/><path d="M5 9l-2 4a3 3 0 0 0 6 0L7 9z"/><path d="M17 9l-2 4a3 3 0 0 0 6 0l-2-4z"/><path d="M5 9l14-2"/></svg>`,
+  merge:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l7 7 7-7"/><path d="M12 11v9"/></svg>`,
+  spark:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4l1.5 4.5L17 10l-4.5 1.5L11 16l-1.5-4.5L5 10l4.5-1.5z"/><path d="M19 15l.7 2 2 .7-2 .7L19 20.5l-.7-2.1L16.3 17.7l2-.7z"/></svg>`,
+  grid: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="1.3"/><circle cx="12" cy="6" r="1.3"/><circle cx="18" cy="6" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/><circle cx="6" cy="18" r="1.3"/><circle cx="12" cy="18" r="1.3"/><circle cx="18" cy="18" r="1.3"/></svg>`,
+  vector:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="3.2" height="6"/><rect x="8.4" y="9" width="3.2" height="6"/><rect x="13.8" y="9" width="3.2" height="6"/><rect x="19.2" y="9" width="1.6" height="6"/></svg>`,
+  gauge:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-4.5"/><circle cx="12" cy="17" r="1.1"/></svg>`,
+  tag:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="7.5" r="1.1"/></svg>`,
+  cnn:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="3.5" height="12"/><rect x="9" y="4" width="3.5" height="16"/><rect x="14.5" y="7.5" width="3.5" height="9"/><rect x="20" y="10" width="1" height="4"/></svg>`,
+};
+</script>
+
+<!-- ==================================================================
+     Diagram helper — builds nodes (HTML) + arrows (SVG) into a canvas
+     ================================================================== -->
+<script>
+function makeDiagram({id, title, caption, w, h, build}) {
+  const fig = document.createElement('figure');
+  fig.className = 'diag';
+  fig.id = id;
+
+  const canvas = document.createElement('div');
+  canvas.className = 'canvas';
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+
+  // Arrow SVG layer
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('class', 'arrows');
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = `
+    <defs>
+      <marker id="ah-${id}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+        <path d="M0,0 L8.5,5 L0,10 z" fill="#8e8d87"/>
+      </marker>
+    </defs>
+  `;
+  canvas.appendChild(svg);
+
+  // helper API exposed to build()
+  const api = {
+    /* Create a node centered on (cx, cy) with given width.
+       kind: 'input' | 'transform' | 'model' | 'api' | 'feature' | 'prob' | 'fuse' | 'classifier' | 'class' | 'neutral'
+       icon: key into ICONS (optional)
+       label: visible text (HTML allowed)
+       sub:   small monospace tag inside the node (optional)
+       h:     height (default 44)
+    */
+    node({cx, cy, w: nw, h: nh = 44, kind = 'neutral', icon, label, sub, anchor}) {
+      const el = document.createElement('div');
+      el.className = `node node--${kind}`;
+      el.style.left = (cx - nw/2) + 'px';
+      el.style.top  = (cy - nh/2) + 'px';
+      el.style.width = nw + 'px';
+      el.style.height = nh + 'px';
+      el.style.justifyContent = 'center';
+      let inner = '';
+      if (icon && ICONS[icon]) inner += `<span class="ico">${ICONS[icon]}</span>`;
+      inner += `<span class="lbl">${label}</span>`;
+      if (sub) inner += `<span class="sub">${sub}</span>`;
+      el.innerHTML = inner;
+      canvas.appendChild(el);
+      // store anchor points for arrow convenience
+      const anchors = {
+        cx, cy,
+        l: { x: cx - nw/2, y: cy },
+        r: { x: cx + nw/2, y: cy },
+        t: { x: cx, y: cy - nh/2 },
+        b: { x: cx, y: cy + nh/2 },
+        tl:{ x: cx - nw/2, y: cy - nh/2 },
+        tr:{ x: cx + nw/2, y: cy - nh/2 },
+        bl:{ x: cx - nw/2, y: cy + nh/2 },
+        br:{ x: cx + nw/2, y: cy + nh/2 },
+      };
+      if (anchor) Object.assign(anchors, anchor);
+      el._a = anchors;
+      return el;
+    },
+
+    /* Plain straight or curved arrow.
+       from / to : {x, y}
+       curve: 'h' (horizontal first) | 'v' (vertical first) | 's' (smooth bezier) | 'l' (line)
+       label: optional text rendered above midpoint
+       dashed: bool
+    */
+    arrow({from, to, curve = 'l', label, dashed = false, headFrom = false, headTo = true}) {
+      const path = document.createElementNS(svgNS, 'path');
+      let d;
+      const dx = to.x - from.x, dy = to.y - from.y;
+      if (curve === 'l') {
+        d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      } else if (curve === 'h') {
+        // horizontal then vertical (orthogonal)
+        d = `M ${from.x} ${from.y} L ${to.x} ${from.y} L ${to.x} ${to.y}`;
+      } else if (curve === 'v') {
+        d = `M ${from.x} ${from.y} L ${from.x} ${to.y} L ${to.x} ${to.y}`;
+      } else if (curve === 's') {
+        // smooth horizontal-leaning cubic
+        const c1x = from.x + dx * 0.5, c1y = from.y;
+        const c2x = from.x + dx * 0.5, c2y = to.y;
+        d = `M ${from.x} ${from.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${to.x} ${to.y}`;
+      } else if (curve === 'sv') {
+        // smooth vertical-leaning cubic
+        const c1x = from.x, c1y = from.y + dy * 0.5;
+        const c2x = to.x,   c2y = from.y + dy * 0.5;
+        d = `M ${from.x} ${from.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${to.x} ${to.y}`;
+      }
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', '#8e8d87');
+      path.setAttribute('stroke-width', '1.25');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      if (dashed) path.setAttribute('stroke-dasharray', '4 4');
+      if (headTo)   path.setAttribute('marker-end',   `url(#ah-${id})`);
+      if (headFrom) path.setAttribute('marker-start', `url(#ah-${id})`);
+      svg.appendChild(path);
+
+      if (label) {
+        const t = document.createElementNS(svgNS, 'text');
+        const mx = (from.x + to.x) / 2;
+        const my = (from.y + to.y) / 2 - 6;
+        t.setAttribute('x', mx);
+        t.setAttribute('y', my);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('class', 'alabel');
+        t.textContent = label;
+        svg.appendChild(t);
+      }
+      return path;
+    },
+
+    /* Tiny merge dot at (cx,cy) */
+    dot(cx, cy) {
+      const d = document.createElement('div');
+      d.className = 'dot';
+      d.style.left = cx + 'px';
+      d.style.top  = cy + 'px';
+      canvas.appendChild(d);
+      return d;
+    },
+
+    /* Group label (small uppercase tag). */
+    grouplabel({x, y, text, align = 'left'}) {
+      const el = document.createElement('div');
+      el.className = 'group-label';
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+      if (align === 'center') el.style.transform = 'translateX(-50%)';
+      if (align === 'right')  el.style.transform = 'translateX(-100%)';
+      el.textContent = text;
+      canvas.appendChild(el);
+      return el;
+    },
+
+    /* Annotation under a node (small mono caption). */
+    annot({cx, cy, text, align = 'center'}) {
+      const el = document.createElement('div');
+      el.className = 'annot';
+      el.style.left = cx + 'px';
+      el.style.top  = cy + 'px';
+      if (align === 'center') el.style.transform = 'translateX(-50%)';
+      if (align === 'right')  el.style.transform = 'translateX(-100%)';
+      el.innerHTML = text;
+      canvas.appendChild(el);
+      return el;
+    },
+
+    /* Free SVG element (for region rectangles, etc.) */
+    rawSvg(html) {
+      const tmp = document.createElementNS(svgNS, 'g');
+      tmp.innerHTML = html;
+      while (tmp.firstChild) svg.appendChild(tmp.firstChild);
+    },
+  };
+
+  build(api);
+
+  fig.appendChild(canvas);
+
+  if (caption) {
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = caption;
+    fig.appendChild(cap);
+  }
+
+  document.getElementById('figures').appendChild(fig);
+  return fig;
+}
+</script>
+
+<!-- ==================================================================
+     FIGURE 1 — Text Credibility Branch
+     ================================================================== -->
+<script>
+makeDiagram({
+  id: 'fig1',
+  w: 1080, h: 320,
+  caption: `<span class="figlabel">Figure 1.</span> <em>Text Credibility Branch.</em> The news text is processed by two parallel sub-modules — an AI-text detector that estimates the likelihood the article was machine-generated, and a CNN-based style encoder that captures lexical and stylistic cues. Their outputs are concatenated to form a single text feature vector and an aggregated text-credibility probability.`,
+  build(g) {
+    // ---- Nodes ----
+    const input = g.node({ cx: 110, cy: 160, w: 170, h: 46, kind: 'input',
+      icon: 'doc', label: 'News text' });
+
+    const ai = g.node({ cx: 470, cy: 88, w: 230, h: 46, kind: 'model',
+      icon: 'ai', label: 'AI-text detector' });
+
+    const cnn = g.node({ cx: 470, cy: 232, w: 230, h: 46, kind: 'model',
+      icon: 'cnn', label: 'CNN style encoder' });
+
+    const cat = g.node({ cx: 740, cy: 160, w: 110, h: 46, kind: 'fuse',
+      icon: 'merge', label: 'Concat' });
+
+    const feat = g.node({ cx: 940, cy: 130, w: 200, h: 42, kind: 'feature',
+      icon: 'vector', label: 'Text feature' });
+
+    const prob = g.node({ cx: 940, cy: 196, w: 200, h: 42, kind: 'prob',
+      icon: 'gauge', label: 'Text probability' });
+
+    g.annot({ cx: 940, cy: 154, text: 'h<sub style="font-family:inherit">text</sub> &nbsp;∈&nbsp; ℝ<sup style="font-family:inherit">d</sup>', align: 'center' });
+    g.annot({ cx: 940, cy: 220, text: 'p<sub style="font-family:inherit">text</sub> &nbsp;∈&nbsp; [0, 1]', align: 'center' });
+
+    // ---- Arrows ----
+    g.arrow({ from: input._a.r, to: ai._a.l,  curve: 's' });
+    g.arrow({ from: input._a.r, to: cnn._a.l, curve: 's' });
+    g.arrow({ from: ai._a.r,  to: cat._a.l,  curve: 's' });
+    g.arrow({ from: cnn._a.r, to: cat._a.l,  curve: 's' });
+    g.arrow({ from: cat._a.r, to: feat._a.l, curve: 's' });
+    g.arrow({ from: cat._a.r, to: prob._a.l, curve: 's' });
+
+    // Group labels
+    g.grouplabel({ x: 470, y: 30, text: 'Parallel sub-modules', align: 'center' });
+  }
+});
+</script>
+
+<!-- ==================================================================
+     FIGURE 2 — Image Authenticity Branch
+     ================================================================== -->
+<script>
+makeDiagram({
+  id: 'fig2',
+  w: 1080, h: 240,
+  caption: `<span class="figlabel">Figure 2.</span> <em>Image Authenticity Branch.</em> The input image is converted from RGB to YCbCr, decomposed into the frequency domain via a 2-D Discrete Cosine Transform, and fed to a ResNet-18 encoder. The encoder yields an image feature vector together with an authenticity probability.`,
+  build(g) {
+    const cy = 110;
+
+    const input = g.node({ cx: 90,  cy, w: 150, h: 46, kind: 'input',
+      icon: 'image', label: 'Image' });
+
+    const ycbcr = g.node({ cx: 290, cy, w: 180, h: 46, kind: 'transform',
+      icon: 'palette', label: 'YCbCr conversion' });
+
+    const dct = g.node({ cx: 490, cy, w: 160, h: 46, kind: 'transform',
+      icon: 'wave', label: '2-D DCT' });
+
+    const resnet = g.node({ cx: 700, cy, w: 200, h: 46, kind: 'model',
+      icon: 'layers', label: 'ResNet-18 encoder' });
+
+    const feat = g.node({ cx: 950, cy: 78, w: 210, h: 42, kind: 'feature',
+      icon: 'vector', label: 'Image feature' });
+
+    const prob = g.node({ cx: 950, cy: 142, w: 210, h: 42, kind: 'prob',
+      icon: 'gauge', label: 'Image probability' });
+
+    g.annot({ cx: 950, cy: 102, text: 'h<sub style="font-family:inherit">img</sub> &nbsp;∈&nbsp; ℝ<sup style="font-family:inherit">d</sup>', align: 'center' });
+    g.annot({ cx: 950, cy: 166, text: 'p<sub style="font-family:inherit">img</sub> &nbsp;∈&nbsp; [0, 1]', align: 'center' });
+
+    // arrows
+    g.arrow({ from: input._a.r,  to: ycbcr._a.l, curve: 'l' });
+    g.arrow({ from: ycbcr._a.r,  to: dct._a.l,   curve: 'l' });
+    g.arrow({ from: dct._a.r,    to: resnet._a.l,curve: 'l' });
+    g.arrow({ from: resnet._a.r, to: feat._a.l,  curve: 's' });
+    g.arrow({ from: resnet._a.r, to: prob._a.l,  curve: 's' });
+
+    g.grouplabel({ x: 390, y: 30, text: 'Frequency-domain preprocessing', align: 'center' });
+    g.grouplabel({ x: 700, y: 30, text: 'Encoder', align: 'center' });
+  }
+});
+</script>
+
+<!-- ==================================================================
+     FIGURE 3 — Cross-Modal Consistency (FND-CLIP)
+     ================================================================== -->
+<script>
+makeDiagram({
+  id: 'fig3',
+  w: 1080, h: 260,
+  caption: `<span class="figlabel">Figure 3.</span> <em>Cross-Modal Consistency Branch (FND-CLIP).</em> Text and image inputs are jointly embedded by FND-CLIP, which produces a cross-modal feature vector and a consistency probability quantifying the semantic alignment between the two modalities.`,
+  build(g) {
+    const inText = g.node({ cx: 110, cy: 80,  w: 170, h: 46, kind: 'input',
+      icon: 'doc',   label: 'News text' });
+    const inImg  = g.node({ cx: 110, cy: 180, w: 170, h: 46, kind: 'input',
+      icon: 'image', label: 'Image' });
+
+    const clip = g.node({ cx: 530, cy: 130, w: 280, h: 96, kind: 'model',
+      icon: 'link', label: 'FND-CLIP' });
+    // big box: add a sub-line
+    const sub = document.createElement('div');
+    sub.style.cssText = `
+      position:absolute; left:${530-140}px; top:${130+12}px;
+      width:280px; text-align:center;
+      font: 400 11.5px/1 'IBM Plex Mono', monospace;
+      color: var(--muted); pointer-events:none;
+    `;
+    sub.textContent = 'joint vision-language encoder';
+    clip.parentElement.appendChild(sub);
+
+    const feat = g.node({ cx: 920, cy: 95,  w: 240, h: 42, kind: 'feature',
+      icon: 'vector', label: 'Cross-modal feature' });
+    const prob = g.node({ cx: 920, cy: 165, w: 240, h: 42, kind: 'prob',
+      icon: 'gauge',  label: 'Consistency probability' });
+
+    g.annot({ cx: 920, cy: 119, text: 'h<sub style="font-family:inherit">cm</sub> &nbsp;∈&nbsp; ℝ<sup style="font-family:inherit">d</sup>', align: 'center' });
+    g.annot({ cx: 920, cy: 189, text: 'p<sub style="font-family:inherit">cm</sub> &nbsp;∈&nbsp; [0, 1]', align: 'center' });
+
+    g.arrow({ from: inText._a.r, to: clip._a.l, curve: 's' });
+    g.arrow({ from: inImg._a.r,  to: clip._a.l, curve: 's' });
+    g.arrow({ from: clip._a.r, to: feat._a.l, curve: 's' });
+    g.arrow({ from: clip._a.r, to: prob._a.l, curve: 's' });
+  }
+});
+</script>
+
+<!-- ==================================================================
+     FIGURE 4 — Fact Checking Module
+     ================================================================== -->
+<script>
+makeDiagram({
+  id: 'fig4',
+  w: 1080, h: 240,
+  caption: `<span class="figlabel">Figure 4.</span> <em>Fact-Checking Module.</em> A news claim is queried against the Google Fact Check API; candidate evidence is retrieved by a Sentence-Transformer semantic search and then verified by a Natural Language Inference model that contrasts the claim with the evidence to produce a soft veracity score.`,
+  build(g) {
+    const cy = 120;
+
+    const claim = g.node({ cx: 90, cy, w: 150, h: 46, kind: 'input',
+      icon: 'quote ' in ICONS ? 'quote' : 'doc', label: 'News claim' });
+    // simpler — just doc icon
+    claim.querySelector('.ico').innerHTML = ICONS.doc;
+
+    const api = g.node({ cx: 310, cy, w: 220, h: 46, kind: 'api',
+      icon: 'cloud', label: 'Google Fact Check API' });
+
+    const retr = g.node({ cx: 580, cy, w: 260, h: 46, kind: 'model',
+      icon: 'search', label: 'Sentence-Transformer' });
+
+    const nli = g.node({ cx: 840, cy, w: 200, h: 46, kind: 'model',
+      icon: 'scale', label: 'NLI verification' });
+
+    const score = g.node({ cx: 990, cy: 200, w: 180, h: 42, kind: 'prob',
+      icon: 'shield', label: 'Veracity score' });
+
+    g.annot({ cx: 990, cy: 224, text: 's<sub style="font-family:inherit">fact</sub> &nbsp;∈&nbsp; [0, 1]', align: 'center' });
+
+    // arrows along the row
+    g.arrow({ from: claim._a.r, to: api._a.l, curve: 'l' });
+    g.arrow({ from: api._a.r, to: retr._a.l,  curve: 'l' });
+    g.arrow({ from: retr._a.r, to: nli._a.l,  curve: 'l' });
+    // nli → score (down-right)
+    g.arrow({ from: nli._a.b, to: score._a.l, curve: 'sv' });
+
+    g.grouplabel({ x: 310, y: 32, text: 'External evidence retrieval', align: 'center' });
+    g.grouplabel({ x: 710, y: 32, text: 'Semantic verification', align: 'center' });
+  }
+});
+</script>
+
+<!-- ==================================================================
+     FIGURE 5 — Overall System Architecture
+     ================================================================== -->
+<script>
+makeDiagram({
+  id: 'fig5',
+  w: 1200, h: 700,
+  caption: `<span class="figlabel">Figure 5.</span> <em>Overall System Architecture.</em> The text and image of a news article are dispatched to four parallel modules: the three modality-specific detection branches and the fact-checking module. Each module emits a feature vector and a calibrated probability (or soft score). The four signals are combined by an Attention Fusion Layer that learns to weight branches per sample and then passed to an MLP classifier, which assigns one of five misinformation categories.`,
+  build(g) {
+    // -------- Inputs (top) --------
+    const inText = g.node({ cx: 350, cy: 60, w: 220, h: 46, kind: 'input',
+      icon: 'doc',   label: 'News text' });
+    const inImg  = g.node({ cx: 850, cy: 60, w: 220, h: 46, kind: 'input',
+      icon: 'image', label: 'News image' });
+
+    // -------- Module row (branches + fact-check) --------
+    // 4 columns. centers at 180, 460, 740, 1020. Width 240, height 96 (two-line label).
+    const my = 240;
+    const mw = 240, mh = 96;
+
+    const m1 = g.node({ cx: 180,  cy: my, w: mw, h: mh, kind: 'model',
+      icon: 'text',  label: 'Text<br>Credibility Branch' });
+    const m2 = g.node({ cx: 460,  cy: my, w: mw, h: mh, kind: 'model',
+      icon: 'image', label: 'Image<br>Authenticity Branch' });
+    const m3 = g.node({ cx: 740,  cy: my, w: mw, h: mh, kind: 'model',
+      icon: 'link',  label: 'Cross-Modal<br>Consistency (FND-CLIP)' });
+    const m4 = g.node({ cx: 1020, cy: my, w: mw, h: mh, kind: 'api',
+      icon: 'shield',label: 'Fact-Checking<br>Module' });
+
+    // make labels stack with two lines visually
+    [m1, m2, m3, m4].forEach(m => {
+      m.style.flexDirection = 'row';
+      m.querySelector('.lbl').style.cssText = 'text-align:center; line-height:1.3;';
+      m.style.padding = '12px 14px';
+    });
+
+    // tiny "see Fig N" caption under each module
+    g.annot({ cx: 180,  cy: my + mh/2 + 8, text: 'see Fig. 1', align: 'center' });
+    g.annot({ cx: 460,  cy: my + mh/2 + 8, text: 'see Fig. 2', align: 'center' });
+    g.annot({ cx: 740,  cy: my + mh/2 + 8, text: 'see Fig. 3', align: 'center' });
+    g.annot({ cx: 1020, cy: my + mh/2 + 8, text: 'see Fig. 4', align: 'center' });
+
+    // -------- Fusion --------
+    const fy = 410;
+    const fusion = g.node({ cx: 600, cy: fy, w: 540, h: 60, kind: 'fuse',
+      icon: 'spark', label: 'Attention Fusion Layer' });
+
+    // -------- Classifier --------
+    const cy_mlp = 510;
+    const mlp = g.node({ cx: 600, cy: cy_mlp, w: 240, h: 46, kind: 'classifier',
+      icon: 'grid', label: 'MLP classifier' });
+
+    // -------- Output classes --------
+    const oy = 630;
+    const cls = [
+      { cx: 150,  w: 140, label: 'Real news' },
+      { cx: 360,  w: 170, label: 'Out-of-context' },
+      { cx: 600,  w: 220, label: 'Real text + Fake image' },
+      { cx: 850,  w: 220, label: 'Fake text + Real image' },
+      { cx: 1070, w: 140, label: 'Fully fake' },
+    ];
+    const classNodes = cls.map(c => g.node({
+      cx: c.cx, cy: oy, w: c.w, h: 38, kind: 'class',
+      icon: 'tag', label: c.label
+    }));
+
+    // -------- Arrows: Inputs → modules --------
+    // Text → m1, m3, m4
+    g.arrow({ from: inText._a.b, to: m1._a.t, curve: 's' });
+    g.arrow({ from: inText._a.b, to: m3._a.t, curve: 's' });
+    g.arrow({ from: inText._a.b, to: m4._a.t, curve: 's' });
+    // Image → m2, m3
+    g.arrow({ from: inImg._a.b,  to: m2._a.t, curve: 's' });
+    g.arrow({ from: inImg._a.b,  to: m3._a.t, curve: 's' });
+
+    // -------- Arrows: modules → fusion --------
+    [m1, m2, m3, m4].forEach((m, i) => {
+      const labels = ['(h₁, p₁)', '(h₂, p₂)', '(h₃, p₃)', 's<sub>fact</sub>'];
+      // place label as a separate annotation, not on arrow text (better with sub)
+      const fromPt = m._a.b;
+      // route to fusion top at x = m.cx (fusion is wide enough to receive everywhere)
+      const toPt = { x: m._a.cx, y: fusion._a.t.y };
+      g.arrow({ from: fromPt, to: toPt, curve: 'l' });
+      g.annot({ cx: m._a.cx, cy: (fromPt.y + toPt.y)/2 - 6, text: labels[i], align: 'center' });
+    });
+
+    // -------- Fusion → MLP --------
+    g.arrow({ from: fusion._a.b, to: mlp._a.t, curve: 'l' });
+
+    // -------- MLP → output classes (fan-out) --------
+    // fan from a junction below MLP
+    const junction = { x: 600, y: cy_mlp + 50 };
+    g.arrow({ from: mlp._a.b, to: junction, curve: 'l', headTo: false });
+    g.dot(junction.x, junction.y);
+    classNodes.forEach(n => {
+      g.arrow({ from: junction, to: n._a.t, curve: 's' });
+    });
+
+    // Section group labels intentionally omitted — the vertical structure
+    // (inputs → branches → fusion → classifier → output) is self-evident
+    // and rail labels were colliding with content on the wide outer columns.
+  }
+});
+</script>
+
+<!-- ==================================================================
+     FIGURE 6 — Model Training Flowchart
+     ================================================================== -->
+<script>
+makeDiagram({
+  id: 'fig6',
+  w: 1080, h: 760,
+  caption: `<span class="figlabel">Figure 6.</span> <em>Model Training Flowchart.</em> The training procedure follows two stages. First, each detection branch is trained independently on its own dataset. Their weights are then frozen, and only the attention fusion layer and the MLP classifier are trained on top. The loop iterates until the maximum number of epochs is reached, at which point the final model is saved.`,
+  build(g) {
+    // Start oval
+    const start = g.node({ cx: 540, cy: 40, w: 110, h: 38, kind: 'class', label: 'Start' });
+
+    // Preprocess
+    const pre = g.node({ cx: 540, cy: 130, w: 240, h: 46, kind: 'transform',
+      icon: 'layers', label: 'Preprocess Dataset' });
+
+    // Three parallel branch training boxes
+    const t1 = g.node({ cx: 220, cy: 240, w: 240, h: 46, kind: 'model',
+      icon: 'text',  label: 'Train Text Branch' });
+    const t2 = g.node({ cx: 540, cy: 240, w: 240, h: 46, kind: 'model',
+      icon: 'image', label: 'Train Image Branch' });
+    const t3 = g.node({ cx: 860, cy: 240, w: 240, h: 46, kind: 'model',
+      icon: 'link',  label: 'Train FND-CLIP' });
+
+    // Freeze branch weights
+    const freeze = g.node({ cx: 540, cy: 360, w: 260, h: 46, kind: 'transform',
+      label: 'Freeze Branch Weights' });
+
+    // Train fusion + classifier
+    const tf = g.node({ cx: 540, cy: 470, w: 290, h: 46, kind: 'fuse',
+      icon: 'spark', label: 'Train Fusion + Classifier' });
+
+    // Decision — pill-style box with question
+    const dec = g.node({ cx: 540, cy: 580, w: 220, h: 50, kind: 'prob',
+      label: 'Epochs &lt; Max?' });
+
+    // Save final model
+    const save = g.node({ cx: 540, cy: 680, w: 220, h: 46, kind: 'feature',
+      label: 'Save Final Model' });
+
+    // Stop oval
+    const stop = g.node({ cx: 540, cy: 758, w: 110, h: 38, kind: 'class', label: 'Stop' });
+
+    // ---- Arrows ----
+    g.arrow({ from: start._a.b, to: pre._a.t, curve: 'l' });
+
+    // Pre to 3 parallel branches
+    g.arrow({ from: pre._a.b, to: t1._a.t, curve: 's' });
+    g.arrow({ from: pre._a.b, to: t2._a.t, curve: 'l' });
+    g.arrow({ from: pre._a.b, to: t3._a.t, curve: 's' });
+
+    // 3 branches converge to Freeze
+    g.arrow({ from: t1._a.b, to: freeze._a.t, curve: 's' });
+    g.arrow({ from: t2._a.b, to: freeze._a.t, curve: 'l' });
+    g.arrow({ from: t3._a.b, to: freeze._a.t, curve: 's' });
+
+    // Freeze → Train Fusion
+    g.arrow({ from: freeze._a.b, to: tf._a.t, curve: 'l' });
+
+    // Train Fusion → Decision
+    g.arrow({ from: tf._a.b, to: dec._a.t, curve: 'l' });
+
+    // Decision "No" → Save
+    g.arrow({ from: dec._a.b, to: save._a.t, curve: 'l', label: 'No' });
+
+    // Save → Stop
+    g.arrow({ from: save._a.b, to: stop._a.t, curve: 'l' });
+
+    // Decision "Yes" → loop back to Train Fusion (right-side L-shape)
+    g.rawSvg(`
+      <path d="M 650,580 L 820,580 L 820,470 L 685,470"
+            fill="none" stroke="#8e8d87" stroke-width="1.25"
+            stroke-linecap="round" stroke-linejoin="round"
+            marker-end="url(#ah-fig6)" />
+      <text x="830" y="530" text-anchor="start" class="alabel">Yes</text>
+    `);
+  }
+});
+</script>
+
+</body>
+</html>
