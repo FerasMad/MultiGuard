@@ -33,8 +33,8 @@ DEVICE = "cpu"  # safe default; MPS can OOM on concurrent requests
 FEAT_DIM = 512
 NUM_CLASSES = 3
 CKPT_PATH = ROOT / "outputs" / "full_pipeline_clean" / "best.pt"
-LABEL_NAMES = {0: "Real", 1: "Out-of-Context", 2: "Manipulated", 3: "AI-Text", 4: "Double Fake"}
-LABEL_NAMES_AR = {0: "حقيقي", 1: "خارج السياق", 2: "معدَّل", 3: "نص مولَّد", 4: "تزييف مزدوج"}
+LABEL_NAMES = {0: "Real", 1: "Out-of-Context", 2: "Manipulated", 3: "AI-Text", 4: "Fully Fabricated"}
+LABEL_NAMES_AR = {0: "حقيقي", 1: "خارج السياق", 2: "معدَّل", 3: "نص مولَّد", 4: "ملفَّق بالكامل"}
 DCT_SIZE = 224
 JPEG_QUALITY = 85
 
@@ -183,7 +183,7 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
 
         # Map 3-class model outputs to 5-class UI
         # Model classes: 0=Real, 1=Manipulated, 2=OOC
-        # UI classes:    0=Real, 1=OOC, 2=Manipulated, 3=AI-Text, 4=Double-Fake
+        # UI classes:    0=Real, 1=OOC, 2=Manipulated, 3=AI-Text, 4=Fully-Fabricated
         real_prob = probs[0].item()
         manip_prob = probs[1].item()
         ooc_prob = probs[2].item()
@@ -229,7 +229,7 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
                 "Out-of-Context": round(ooc_prob, 4),
                 "Manipulated": round(manip_prob, 4),
                 "AI-Text": 0.0,
-                "Double-Fake": 0.0,
+                "Fully-Fabricated": 0.0,
             },
             "modules": modules,
             "explanation": explanations[pred_idx],
