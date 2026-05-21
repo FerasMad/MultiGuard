@@ -33,8 +33,8 @@ DEVICE = "cpu"  # safe default; MPS can OOM on concurrent requests
 FEAT_DIM = 512
 NUM_CLASSES = 3
 CKPT_PATH = ROOT / "outputs" / "full_pipeline_clean" / "best.pt"
-LABEL_NAMES = {0: "Real", 1: "Manipulated", 2: "Out-of-Context"}
-LABEL_NAMES_AR = {0: "حقيقي", 1: "معدَّل", 2: "خارج السياق"}
+LABEL_NAMES = {0: "Real", 1: "Out-of-Context", 2: "Manipulated", 3: "AI-Text", 4: "Double Fake"}
+LABEL_NAMES_AR = {0: "حقيقي", 1: "خارج السياق", 2: "معدَّل", 3: "نص مولَّد", 4: "تزييف مزدوج"}
 DCT_SIZE = 224
 JPEG_QUALITY = 85
 
@@ -181,34 +181,42 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
         probs = F.softmax(main_logits, dim=0)       # [3]
         aux_probs = torch.sigmoid(aux_logits)        # [2]
 
-        pred_idx = probs.argmax().item()
-        confidence = probs[pred_idx].item()
-
-        # Build module breakdown for the UI
-        # Map model outputs to the 5 UI module scores
+        # Map 3-class model outputs to 5-class UI
+        # Model classes: 0=Real, 1=Manipulated, 2=OOC
+        # UI classes:    0=Real, 1=OOC, 2=Manipulated, 3=AI-Text, 4=Double-Fake
         real_prob = probs[0].item()
         manip_prob = probs[1].item()
         ooc_prob = probs[2].item()
         forensic_fake_prob = aux_probs[1].item()
 
+        # Remap to 5-class indices
+        prob_map = {0: real_prob, 1: ooc_prob, 2: manip_prob}
+        pred_idx_3class = probs.argmax().item()
+        remap = {0: 0, 1: 2, 2: 1}  # model idx -> UI idx
+        pred_idx = remap[pred_idx_3class]
+        confidence = probs[pred_idx_3class].item()
+
         modules = {
-            "text_ai":       round(1.0 - real_prob, 2),         # text AI suspicion
-            "text_patterns": round(manip_prob * 0.6, 2),        # linguistic anomaly proxy
-            "image_manip":   round(forensic_fake_prob, 2),      # forensic image score
-            "cross_modal":   round(ooc_prob, 2),                # cross-modal misalignment
-            "overall":       round(1.0 - real_prob, 2),         # overall fake score
+            "text_ai":       round(1.0 - real_prob, 2),
+            "text_patterns": round(manip_prob * 0.6, 2),
+            "image_manip":   round(forensic_fake_prob, 2),
+            "cross_modal":   round(ooc_prob, 2),
+            "overall":       round(1.0 - real_prob, 2),
         }
 
-        # Explanation text
         explanations = {
             0: "The text and image appear genuine and well-aligned. No significant manipulation or out-of-context usage detected.",
-            1: "The image shows signs of digital manipulation. The forensic encoder detected inconsistencies in the pixel-level artifacts, suggesting the image has been altered.",
-            2: "The image and text appear genuine individually, but the cross-modal module detected low semantic alignment between them, suggesting the image was used out of context.",
+            1: "The image and text appear genuine individually, but the cross-modal module detected low semantic alignment between them, suggesting the image was used out of context.",
+            2: "The image shows signs of digital manipulation. The forensic encoder detected inconsistencies in the pixel-level artifacts, suggesting the image has been altered.",
+            3: "The text shows patterns consistent with AI-generated content. The text forensic module detected linguistic signatures typical of large language model outputs.",
+            4: "Both image and text show signs of fabrication. The forensic modules detected manipulated visuals paired with AI-generated text.",
         }
         explanations_ar = {
             0: "يبدو أن النص والصورة حقيقيان ومتطابقان. لم يتم اكتشاف أي تعديل أو استخدام خارج السياق.",
-            1: "تظهر على الصورة علامات تعديل رقمي. اكتشف المحلل الجنائي تناقضات في بنية البيكسلات، مما يشير إلى أن الصورة معدلة.",
-            2: "تبدو الصورة والنص حقيقيين بشكل منفرد، إلا أن وحدة المطابقة رصدت ضعف التطابق الدلالي بينهما، مما يشير إلى أن الصورة استُخدمت خارج سياقها.",
+            1: "تبدو الصورة والنص حقيقيين بشكل منفرد، إلا أن وحدة المطابقة رصدت ضعف التطابق الدلالي بينهما، مما يشير إلى أن الصورة استُخدمت خارج سياقها.",
+            2: "تظهر على الصورة علامات تعديل رقمي. اكتشف المحلل الجنائي تناقضات في بنية البيكسلات، مما يشير إلى أن الصورة معدلة.",
+            3: "يُظهر النص أنماطًا تتوافق مع المحتوى المولَّد بالذكاء الاصطناعي. رصدت وحدة تحليل النص بصمات لغوية نموذجية لمخرجات النماذج اللغوية الكبيرة.",
+            4: "تظهر على كل من الصورة والنص علامات تزييف. رصدت الوحدات الجنائية صورًا معدَّلة مقترنة بنص مولَّد بالذكاء الاصطناعي.",
         }
 
         return JSONResponse({
@@ -218,8 +226,10 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
             "label_index": pred_idx,
             "probabilities": {
                 "Real": round(real_prob, 4),
-                "Manipulated": round(manip_prob, 4),
                 "Out-of-Context": round(ooc_prob, 4),
+                "Manipulated": round(manip_prob, 4),
+                "AI-Text": 0.0,
+                "Double-Fake": 0.0,
             },
             "modules": modules,
             "explanation": explanations[pred_idx],

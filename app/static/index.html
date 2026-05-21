@@ -73,21 +73,29 @@
   .verdict-card.real { border: 2px solid #10b981; }
   .verdict-card.manipulated { border: 2px solid #ef4444; }
   .verdict-card.ooc { border: 2px solid #f59e0b; }
+  .verdict-card.ai-text { border: 2px solid #8b5cf6; }
+  .verdict-card.double-fake { border: 2px solid #dc2626; }
   .verdict-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
   .verdict-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
   .verdict-title.real { color: #047857; }
   .verdict-title.manipulated { color: #dc2626; }
   .verdict-title.ooc { color: #d97706; }
+  .verdict-title.ai-text { color: #7c3aed; }
+  .verdict-title.double-fake { color: #dc2626; }
   .confidence-bar { height: 8px; background: #f3f4f6; border-radius: 4px; overflow: hidden; margin: 20px 0 8px; }
   .confidence-fill { height: 100%; transition: width .6s; }
   .confidence-fill.real { background: #10b981; }
   .confidence-fill.manipulated { background: #ef4444; }
   .confidence-fill.ooc { background: #f59e0b; }
+  .confidence-fill.ai-text { background: #8b5cf6; }
+  .confidence-fill.double-fake { background: #dc2626; }
   .confidence-text { font-size: 13px; color: #4b5563; }
   .explanation { border-radius: 8px; padding: 14px; margin-top: 20px; font-size: 13px; line-height: 1.6; }
   .explanation.real { background: #f0fdf4; color: #065f46; }
   .explanation.manipulated { background: #fef2f2; color: #7f1d1d; }
   .explanation.ooc { background: #fffbeb; color: #78350f; }
+  .explanation.ai-text { background: #f5f3ff; color: #4c1d95; }
+  .explanation.double-fake { background: #fef2f2; color: #7f1d1d; }
   .scores-panel { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; }
   .scores-title { font-size: 15px; font-weight: 600; color: #111827; margin-bottom: 18px; }
   .score-row { display: grid; grid-template-columns: 200px 1fr 60px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
@@ -203,12 +211,20 @@
             <div class="prob-bar-bg"><div class="prob-bar-fill" id="probReal" style="background:#10b981"></div></div>
           </div>
           <div class="prob-row">
+            <span class="prob-label">Out-of-Context</span>
+            <div class="prob-bar-bg"><div class="prob-bar-fill" id="probOOC" style="background:#f59e0b"></div></div>
+          </div>
+          <div class="prob-row">
             <span class="prob-label">Manipulated</span>
             <div class="prob-bar-bg"><div class="prob-bar-fill" id="probManip" style="background:#ef4444"></div></div>
           </div>
           <div class="prob-row">
-            <span class="prob-label">Out-of-Context</span>
-            <div class="prob-bar-bg"><div class="prob-bar-fill" id="probOOC" style="background:#f59e0b"></div></div>
+            <span class="prob-label">AI-Text</span>
+            <div class="prob-bar-bg"><div class="prob-bar-fill" id="probAIText" style="background:#8b5cf6"></div></div>
+          </div>
+          <div class="prob-row">
+            <span class="prob-label">Double Fake</span>
+            <div class="prob-bar-bg"><div class="prob-bar-fill" id="probDoubleFake" style="background:#dc2626"></div></div>
           </div>
         </div>
       </div>
@@ -337,7 +353,8 @@ function setScore(barId, valId, value) {
 }
 
 function showResults(data) {
-  const cls = data.label_index === 0 ? 'real' : data.label_index === 1 ? 'manipulated' : 'ooc';
+  const clsMap = {0: 'real', 1: 'ooc', 2: 'manipulated', 3: 'ai-text', 4: 'double-fake'};
+  const cls = clsMap[data.label_index] || 'real';
 
   const card = document.getElementById('verdictCard');
   card.className = 'verdict-card ' + cls;
@@ -351,14 +368,19 @@ function showResults(data) {
   expBox.className = 'explanation ' + cls;
   expBox.textContent = isArabic ? data.explanation_ar : data.explanation;
 
-  // Probability bars
+  // Probability bars (5 classes)
   const p = data.probabilities;
-  document.getElementById('probReal').style.width = (p.Real * 100) + '%';
-  document.getElementById('probReal').textContent = (p.Real * 100).toFixed(1) + '%';
-  document.getElementById('probManip').style.width = (p.Manipulated * 100) + '%';
-  document.getElementById('probManip').textContent = (p.Manipulated * 100).toFixed(1) + '%';
-  document.getElementById('probOOC').style.width = (p['Out-of-Context'] * 100) + '%';
-  document.getElementById('probOOC').textContent = (p['Out-of-Context'] * 100).toFixed(1) + '%';
+  function setProb(id, key) {
+    const el = document.getElementById(id);
+    const val = (p[key] || 0) * 100;
+    el.style.width = val + '%';
+    el.textContent = val.toFixed(1) + '%';
+  }
+  setProb('probReal', 'Real');
+  setProb('probOOC', 'Out-of-Context');
+  setProb('probManip', 'Manipulated');
+  setProb('probAIText', 'AI-Text');
+  setProb('probDoubleFake', 'Double-Fake');
 
   // Module scores
   const m = data.modules;
