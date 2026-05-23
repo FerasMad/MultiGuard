@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual envs
+.venv/
+.venv-*/
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.claude/
+
+# Data (fetched per docs/DATA_DOWNLOAD.md)
+data/raw/
+data/processed/
+
+# Model artifacts
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+outputs/
+
+# Feature caches
+cache/
+
+# Logs
+*.log
+.logs/
+logs/
+
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+*.lnk
+
+# Temp
+*.tmp
+*.bak
+.tmp/
+temp/
