@@ -1,0 +1,41 @@
+# V4 Stage 0 — fresh FND-CLIP V1 binary OOC fine-tune (per Dataset+V1 PDF).
+# Output: outputs/v4/stage0_fndclip/best.pt (used to precompute v_semantic_fnd).
+
+seed: 42
+deterministic: false
+stage: stage0
+
+data:
+  type: runtime_images
+  csv_path: data/processed/newsclippings_rows.csv
+
+fusion:
+  # Stage 0 doesn't use a fusion module; trainer recognizes stage=stage0 and
+  # trains the FND-CLIP encoder's binary classifier head directly.
+  type: v3_pairwise
+  feat_dim: 768
+  fused_dim: 1024
+  num_classes: 2
+  num_heads: 8
+  attn_dropout: 0.1
+
+encoders:
+  semantic:
+    type: fnd_clip
+    feat_dim: 512
+    output_dim: 768
+    num_classes: 1
+
+train:
+  epochs: 20
+  batch_size: 32
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  aux_weight: 0.0
+  lr_step: 10
+  lr_gamma: 0.1
+  grad_clip: 1.0
+  early_stop_patience: 5
+  precision: bf16
+  num_workers: 2
+  out_dir: outputs/v4/stage0_fndclip

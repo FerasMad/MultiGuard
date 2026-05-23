@@ -1,0 +1,30 @@
+# V4 FastAPI server config - registry-driven encoders + fusion.
+# Read by app/server.py at startup. Switch encoders/fusion by editing this file.
+
+encoders:
+  semantic:
+    type: fnd_clip
+    ckpt: outputs/v4/stage0_fndclip/best.pt
+    feat_dim: 512
+    output_dim: 768
+  image:
+    type: univfd
+    ckpt: outputs/v4/stage1_univfd/forensic_model.pth
+    out_dim: 768
+  text:
+    type: qwen2_7b
+    model_name: Qwen/Qwen2-7B-Instruct
+    hidden_size: 3584
+    layer_index: -1
+    max_length: 512
+    output_dim: 768
+    load_backbone: true   # server-time: load Qwen at startup
+
+fusion:
+  type: v3_pairwise
+  feat_dim: 768
+  fused_dim: 1024
+  num_classes: 5
+  num_heads: 8
+  attn_dropout: 0.1
+  ckpt: outputs/v4/stage2_fusion/seed_42/best.pt
