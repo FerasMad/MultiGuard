@@ -84,7 +84,7 @@ The full plan with locked decisions is in [`V4_PLAN.md`](V4_PLAN.md) section 17.
 
 **Risk:** TeamViewer file transfer can interrupt; documented as R4 in V4 plan, with HF fallback.
 
-**Document:** Full recipe in `DATA_DOWNLOAD.md`.
+**Document:** Operator-specific transfer recipe is kept locally outside the repo (not committed) since it references paths and host names that are not part of public project documentation.
 
 ---
 

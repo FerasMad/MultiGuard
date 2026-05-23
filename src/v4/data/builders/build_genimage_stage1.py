@@ -53,7 +53,7 @@ def build(out_path: str | None = None, seed: int = 42) -> str:
     gi_root = DATA_ROOT / "GenImage"
     if not gi_root.exists():
         raise FileNotFoundError(
-            f"GenImage not found at {gi_root}. See docs/DATA_DOWNLOAD.md A.5.4."
+            f"GenImage not found at {gi_root}. Stage the 8 official generator subdirs (sd14, sd15, midjourney, adm, glide, vqdm, biggan, wukong) under {gi_root}; see docs/SETUP.md step 6."
         )
 
     rng = random.Random(seed)
