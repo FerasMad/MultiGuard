@@ -41,7 +41,7 @@ def build(out_path: str | None = None) -> str:
     dgm4_root = DATA_ROOT / "DGM4"
     if not dgm4_root.exists():
         raise FileNotFoundError(
-            f"DGM4 not found at {dgm4_root}. See docs/DATA_DOWNLOAD.md A.5.2."
+            f"DGM4 not found at {dgm4_root}. Place the dataset there before building manifests; see docs/SETUP.md step 6."
         )
 
     log.info("scanning DGM4 metadata under %s", dgm4_root)

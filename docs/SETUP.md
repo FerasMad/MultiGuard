@@ -2,7 +2,7 @@
 
 This document covers installation on the V4 implementation PC (Windows 11, dual RTX 4090, 48 GB total VRAM). For Linux, the same `pip install -e ".[gpu,server,dev]"` works; skip the Windows-specific notes.
 
-For raw-dataset acquisition (DGM4, MMFakeBench, VisualNews, GenImage, Qwen2-7B weights), see [`DATA_DOWNLOAD.md`](DATA_DOWNLOAD.md).
+For raw-dataset acquisition (DGM4, MMFakeBench, VisualNews, GenImage, Qwen2-7B weights), see Step 6 below. The exact mechanism (HuggingFace, manual download, file transfer from another PC) is environment-specific and not committed to the repo.
 
 ---
 
@@ -90,7 +90,7 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available(), tor
 
 ## 5. HuggingFace authentication
 
-Required for MMFakeBench + BERT/CLIP auto-download. DGM4 download from HF requires accepting terms in the web UI first; this project's TeamViewer-hybrid recipe avoids that - see `DATA_DOWNLOAD.md`.
+Required for MMFakeBench + BERT/CLIP auto-download. DGM4 download from HF requires accepting terms in the web UI first; if you have a copy of DGM4 from another environment, transferring it directly avoids the HF terms dance.
 
 ```powershell
 huggingface-cli login
@@ -102,7 +102,7 @@ huggingface-cli login
 
 ## 6. Data acquisition
 
-Run the TeamViewer-hybrid recipe in [`DATA_DOWNLOAD.md`](DATA_DOWNLOAD.md). At minimum the new PC needs:
+Acquire the raw datasets via whichever mechanism fits your environment (HuggingFace downloads, manual web UIs, file transfer from another machine). At minimum the new PC needs:
 
 | Location | Contents |
 |----------|----------|

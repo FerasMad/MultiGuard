@@ -86,7 +86,7 @@ def build(out_path: str | None = None) -> str:
     mmfb_root = DATA_ROOT / "MMFakeBench"
     if not mmfb_root.exists():
         raise FileNotFoundError(
-            f"MMFakeBench not found at {mmfb_root}. See docs/DATA_DOWNLOAD.md A.5.3."
+            f"MMFakeBench not found at {mmfb_root}. Run `huggingface-cli download liuxuannan/MMFakeBench --repo-type dataset --local-dir {mmfb_root}`; see docs/SETUP.md step 6."
         )
 
     all_records: list[dict] = []

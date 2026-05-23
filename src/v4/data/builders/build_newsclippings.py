@@ -5,7 +5,7 @@ Per V3.1 section 2:
     0 Real:  NewsCLIPpings (Matched)
     1 OOC:   NewsCLIPpings (Mismatched)
 
-Expected layout on disk (built by docs/DATA_DOWNLOAD.md):
+Expected layout on disk (stage these before building manifests; see docs/SETUP.md step 6):
     data/raw/NewsCLIPpings/news_clippings/data/merged_balanced.json (or similar)
     data/raw/visualnews/origin/<source>/images/<bucket>/<file>.jpg
 """
@@ -57,7 +57,8 @@ def build(out_path: str | None = None) -> str:
     if not nclip_root.exists():
         raise FileNotFoundError(
             f"NewsCLIPpings not found at {nclip_root}. "
-            f"See docs/DATA_DOWNLOAD.md section A.5.1."
+            f"Stage the news_clippings annotations from https://github.com/g-luo/news_clippings under {nclip_root}; "
+            f"see docs/SETUP.md step 6."
         )
 
     # Candidate annotation files; pick the first that exists

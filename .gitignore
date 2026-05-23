@@ -29,7 +29,7 @@ ENV/
 *.swo
 .claude/
 
-# Data (fetched per docs/DATA_DOWNLOAD.md)
+# Data (staged locally, never committed - see docs/SETUP.md step 6)
 data/raw/
 data/processed/
 
