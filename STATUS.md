@@ -10,10 +10,15 @@
 **Forensic image detector** (current sprint deliverable, doctor's brief
 `docs/doctor-briefs/Forensic_Image_Detector_En.pdf`):
 
-| Approach | Status | Best val AP | Overall test AP | Doc |
-|----------|--------|-------------|-----------------|-----|
-| **2 (DCT)** | OK Shipped | 0.9848 @ ep 13 | **0.9863** (6/8 gens) | `phases/forensic/REPORT.md` + `REPORT.docx` |
-| **1 (RGB + Fourier)** | Training | 0.9968+ @ ep 5 | TBD | `phases/forensic/REPORT_v2.md` (TBD) |
+| Approach | Status | Best val AP | Overall test AP | StdDev AP | Doc |
+|----------|--------|-------------|-----------------|-----------|-----|
+| **2 (DCT)** | OK Shipped | 0.9848 @ ep 13 | 0.9863 (6/8 gens) | 0.0158 | unified `phases/forensic/REPORT.md` |
+| **1 (RGB + Fourier)** | OK Shipped | **0.9971 @ ep 10** | **0.9979 (6/8 gens)** | **0.0023** | (same) |
+
+Approach 1 beats Approach 2 by ~1.2 pp on Overall AP and ~7x lower variance
+across generators (StdDev 0.0023 vs 0.0158). Both approaches pass the
+doctor's spec; A1 is more consistent across diffusion generators, A2 is more
+interpretable (frequency-domain input).
 
 **V4 multimodal pipeline** (5-class detector, V3.1 spec):
 - Code + tests + V4 docs all on disk; CI green.
@@ -41,18 +46,19 @@
 
 ---
 
-## Live progress (current 12-hour autonomous window)
+## Live progress (12-hour autonomous window)
 
 | Task | Status | Notes |
 |------|--------|-------|
 | Approach 1 trainer + eval scripts | OK Committed `ce46614` | `train_rgb_fourier.py`, `eval_rgb.py`. Smoke clean. |
-| Approach 1 training | Running | ep 1-6 done, val_ap 0.992-0.997 |
+| Approach 1 training | OK Done | Best val_AP 0.9971 @ ep 10, early-stopped @ ep 15 (1271 s) |
+| Approach 1 per-generator eval | OK Done | Overall AP 0.9979, StdDev 0.0023 |
 | V4 forensic encoder wrapper | OK Committed `ce46614` | `dct_forensic_v1` registered + 9 tests pass |
 | FakeImageDetection checkpoint | OK Downloaded via gdown | `rn50ft_spectralmask.pth` (renamed from spec's `fouriermask`; F-A8) |
 | SD v1.4/v1.5 mirror hunt | OK Exhausted | No HF mirrors with actual data; only Drive remains |
 | Combined eval table builder | OK Written | `build_combined_eval_table.py` |
-| Approach 1 eval | Pending training finish | |
-| Approach 1 REPORT update | Pending eval | |
+| Approach 1 REPORT update | OK Done | REPORT.md / REPORT.docx now cover both approaches |
+| Approach 1 .pth on HF Hub | OK Uploaded | https://huggingface.co/FerasMad/forensic-rgb-v1 |
 | V4 Stage 0 / Stage 2 retrain on FSOS | Deferred | Single-4070 too slow; dual-4090 needs 155 GB data transfer |
 
 ---
@@ -62,9 +68,9 @@
 | ID | Requirement | Status |
 |----|-------------|--------|
 | F.1-F.3 | Data structure, 8 generators, real class | Partial (6/8 gens, VisualNews-as-nature substitute) |
-| F.4-F.11 | Approach 1 (RGB + Fourier) | Training in progress |
+| F.4-F.11 | Approach 1 (RGB + Fourier) | OK Done (spectralmask rename per F-A8) |
 | F.12-F.22 | Approach 2 (DCT) | OK Done |
-| F.23-F.26 | Evaluation (per-gen + aggregates) | OK Done for Approach 2; pending A1 |
+| F.23-F.26 | Evaluation (per-gen + aggregates) | OK Done for both approaches |
 
 See `docs/MASTER_CHECKLIST.md` for the per-row detail with deviation notes.
 

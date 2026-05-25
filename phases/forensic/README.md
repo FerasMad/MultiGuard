@@ -1,11 +1,18 @@
 # Phase Forensic — Binary AI-Generated vs Real Image Detector
 
-**Status:** **Approach 2 (DCT) SHIPPED** (May 2026). Approach 1 (RGB + Fourier) deferred.
+**Status:** **Both approaches SHIPPED** (May 2026).
 
-**Headline result (Approach 2, 6 of 8 generators):**
-- Overall test AP: **0.9863**  (GAN 0.9998 / Diffusion 0.9836, StdDev 0.0158 across gens)
-- Best val AP: **0.9848** at epoch 13 (early-stopped epoch 18)
-- All 12 unit tests pass; 4 Phase-1/2 transition invariants verified.
+**Headline results (6 of 8 generators evaluated):**
+
+| Approach | Best val AP | Overall test AP | StdDev across gens |
+|----------|-------------|-----------------|--------------------|
+| 1 (RGB + Fourier) | **0.9971** @ ep 10 | **0.9979** | **0.0023** |
+| 2 (DCT) | 0.9848 @ ep 13 | 0.9863 | 0.0158 |
+
+Both approaches pass the doctor's spec (F.4-F.26). Approach 1 wins on
+overall AP and consistency across generators; Approach 2 is more
+interpretable (frequency-domain input). All 21 tests pass: 12 Approach 2
+trainer invariants + 9 V4 encoder wrapper tests.
 
 **Doctor handoff:** [`REPORT.md`](REPORT.md) (also `REPORT.docx`).
 **Source brief:** `docs/doctor-briefs/Forensic_Image_Detector_En.pdf`
@@ -59,7 +66,11 @@ Per-generator evaluation table for both approaches (rows = 8 generators × colum
 | **Diffusion Avg** | | | | |
 | **Std Dev** | | | | |
 
-**Final artifact:** `outputs/eval_table.md` populated for **Approach 2** (Approach 1 deferred).
+**Final artifacts:**
+- `outputs/eval_table.md` — Approach 2 per-generator (F.25 format)
+- `outputs/eval_table_rgb.md` — Approach 1 per-generator (F.25 format)
+- `outputs/eval_table_combined.md` — both approaches side-by-side (F.25 final)
+- `REPORT.md` / `REPORT.docx` — doctor handoff with both approaches + training curves embedded
 
 ## Actually-shipped state (May 2026)
 

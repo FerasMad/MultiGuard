@@ -1,4 +1,4 @@
-# Forensic Image Detector - Approach 2 (DCT) Handoff Report
+# Forensic Image Detector - Both Approaches (RGB+Fourier and DCT) Handoff Report
 
 _Build config: `phases\forensic\configs\dct_resnet50.yaml`_  
 
@@ -43,7 +43,7 @@ Three documented deviations (full reasoning in `docs/DECISIONS.md`, F-series):
 
 - **F-A2 (missing generators):** 2 of 8 generators are excluded from this build: `sdv1_4, sdv1_5`. Reason: bitmind/GenImage_StableDiffusionV1.4 and bitmind/GenImage_StableDiffusionV1.5 return HF 404 (May 2026). The eval table marks those rows as `_skipped_`.
 
-- **F-A1 (Approach 1 deferred):** the RGB+Fourier-mask approach (`chandlerbing65nm/FakeImageDetection`) is not in this build. It needs a Linux-only training shell and manual Google Drive download. Planned as a follow-up.
+- **F-A8 (Approach 1 checkpoint rename):** doctor's spec F.5 literally names `mask_15/rn50ft_fouriermask.pth`. Upstream `chandlerbing65nm/FakeImageDetection` renamed it to `rn50ft_spectralmask.pth` (same Fourier-domain masking, just renamed). We use the spectralmask file as the spec-intended successor. Init method recorded as: `FakeImageDetection mask_15 ckpt (rn50ft_spectralmask.pth) [deviation F-A8: upstream renamed fouriermask->spectralmask]`.
 
 
 ## 4. Dataset
@@ -137,6 +137,73 @@ Generators evaluated: 6 / 8
 
 
 Summary aggregates: **Overall AP = 0.9863**, Diffusion-avg AP = 0.9836, GAN-avg AP = 0.9998, StdDev AP = 0.0158.
+
+
+## 6.5. Approach 1 (RGB + Fourier mask) results
+
+- **Best val AP:** `0.9971` at epoch `10` (final epoch 15, elapsed 1271.2 s).
+- **Init method:** `FakeImageDetection mask_15 ckpt (rn50ft_spectralmask.pth) [deviation F-A8: upstream renamed fouriermask->spectralmask]`.
+- **Train samples:** 12000, **val:** 3000.
+- **Best checkpoint:** `phases/forensic/outputs/rgb/forensic_rgb_model.pth` (per spec F.11)
+
+
+### Approach 1 training history (per epoch)
+
+| epoch | train_loss | val_ap | val_acc | lr | patience_left | best |
+|-------|------------|--------|---------|----|--------------|----|
+| 1 | 0.149772 | 0.994886 | 0.970000 | 1.00e-04 | 5 | * |
+| 2 | 0.062522 | 0.991986 | 0.967667 | 1.00e-04 | 4 |  |
+| 3 | 0.030800 | 0.994477 | 0.968333 | 1.00e-04 | 3 |  |
+| 4 | 0.023022 | 0.994987 | 0.972000 | 1.00e-04 | 5 | * |
+| 5 | 0.019939 | 0.996765 | 0.976667 | 1.00e-04 | 5 | * |
+| 6 | 0.013251 | 0.994458 | 0.977000 | 1.00e-04 | 4 |  |
+| 7 | 0.012487 | 0.995671 | 0.976000 | 1.00e-04 | 3 |  |
+| 8 | 0.009827 | 0.995924 | 0.980000 | 1.00e-04 | 2 |  |
+| 9 | 0.008397 | 0.996837 | 0.978000 | 5.00e-05 | 5 | * |
+| 10 | 0.005413 | 0.997099 | 0.982000 | 5.00e-05 | 5 | * |
+| 11 | 0.006191 | 0.996784 | 0.981667 | 5.00e-05 | 4 |  |
+| 12 | 0.004691 | 0.996809 | 0.981333 | 5.00e-05 | 3 |  |
+| 13 | 0.003719 | 0.996523 | 0.979667 | 5.00e-05 | 2 |  |
+| 14 | 0.003121 | 0.996736 | 0.976667 | 2.50e-05 | 1 |  |
+| 15 | 0.003690 | 0.996494 | 0.978667 | 2.50e-05 | 0 |  |
+
+
+### Approach 1 training curves
+
+![Training curves for Approach 1: train_loss + val_ap + lr per epoch](outputs/training_curves_rgb.png)
+
+
+Approach 1 summary aggregates: **Overall AP = 0.9979**, Diffusion-avg AP = 0.9975, GAN-avg AP = 0.9996, StdDev AP = 0.0023.
+
+
+## 6.6. Combined comparison (F.25 final deliverable)
+
+# Forensic Image Detector - Approach 1 (RGB+Fourier) + Approach 2 (DCT) - Per-Generator Eval
+
+Per-generator AP / Accuracy / AUC for both approaches (F.25 + F.23).
+
+| Generator | Type | A1 AP | A2 AP | A1 Acc | A2 Acc | A1 AUC | A2 AUC | n |
+|-----------|------|-------|-------|--------|--------|--------|--------|---|
+| midjourney | Diffusion | 0.9932 | 0.9569 | 0.9560 | 0.8590 | 0.9935 | 0.9606 | 1000 |
+| sdv1_4 | Diffusion | _skipped_ | _skipped_ | _skipped_ | _skipped_ | _skipped_ | _skipped_ | 0 |
+| sdv1_5 | Diffusion | _skipped_ | _skipped_ | _skipped_ | _skipped_ | _skipped_ | _skipped_ | 0 |
+| wukong | Diffusion | 0.9992 | 0.9842 | 0.9830 | 0.9310 | 0.9992 | 0.9844 | 1000 |
+| vqdm | Diffusion | 0.9980 | 0.9846 | 0.9750 | 0.9420 | 0.9980 | 0.9870 | 1000 |
+| adm | Diffusion | 0.9987 | 0.9967 | 0.9830 | 0.9740 | 0.9987 | 0.9967 | 1000 |
+| glide | Diffusion | 0.9986 | 0.9958 | 0.9900 | 0.9740 | 0.9988 | 0.9966 | 1000 |
+| biggan | GAN | 0.9996 | 0.9998 | 0.9930 | 0.9830 | 0.9996 | 0.9998 | 1000 |
+| **Overall Avg** | (all) | 0.9979 | 0.9863 | 0.9800 | 0.9438 | 0.9980 | 0.9875 | - |
+| **GAN Avg** | GAN | 0.9996 | 0.9998 | 0.9930 | 0.9830 | 0.9996 | 0.9998 | - |
+| **Diffusion Avg** | Diffusion | 0.9975 | 0.9836 | 0.9774 | 0.9360 | 0.9976 | 0.9851 | - |
+| **Std Dev (AP)** | (across gens) | 0.0023 | 0.0158 | - | - | - | - | - |
+
+_Approach 1 (RGB+Fourier) evaluated 6/8 generators; Approach 2 (DCT) evaluated 6/8._
+
+_Approach 1 ckpt: `phases\forensic\outputs\rgb\forensic_rgb_model.pth`_
+_Approach 2 ckpt: `phases\forensic\outputs\dct\forensic_dct_model.pth`_
+
+
+**Comparison:** Across the 6 evaluated generators, **Approach 1 (RGB+Fourier)** is ahead on Overall AP by **0.0115** (A1=0.9979 vs A2=0.9863).
 
 
 ## 7. Discussion

@@ -74,6 +74,16 @@ def main():
         else "_eval_table.md not yet generated_"
     )
 
+    # ---- Approach 1 artifacts (optional; render if present) ----
+    rgb_train = _read_json(root / "phases/forensic/outputs/rgb/train_summary.json")
+    rgb_eval = _read_json(root / "phases/forensic/outputs/eval_rgb.json")
+    rgb_history = _read_csv_rows(root / "phases/forensic/outputs/rgb/training_history.csv")
+    combined_table_path = root / "phases/forensic/outputs/eval_table_combined.md"
+    combined_table_md = (
+        combined_table_path.read_text(encoding="utf-8") if combined_table_path.exists() else ""
+    )
+    approach1_present = not rgb_train.get("_missing") and not rgb_eval.get("_missing")
+
     # ---- gather numbers for in-text use ----
     best_ap = train_summary.get("best_ap")
     best_epoch = train_summary.get("best_epoch")
@@ -94,7 +104,12 @@ def main():
 
     # ---- write Markdown report ----
     lines: list[str] = []
-    lines.append("# Forensic Image Detector - Approach 2 (DCT) Handoff Report\n")
+    if approach1_present:
+        lines.append(
+            "# Forensic Image Detector - Both Approaches (RGB+Fourier and DCT) Handoff Report\n"
+        )
+    else:
+        lines.append("# Forensic Image Detector - Approach 2 (DCT) Handoff Report\n")
     lines.append(f"_Build config: `{train_summary.get('config_path', 'n/a')}`_  \n")
     lines.append("_Repo: github.com/FerasMad/MultiGuard_  \n")
     lines.append("\n## 1. Scope\n")
@@ -142,9 +157,21 @@ def main():
     lines.append(
         f"- **F-A2 (missing generators):** {len(missing_gens)} of 8 generators are excluded from this build: `{', '.join(missing_gens)}`. Reason: {missing_reason}. The eval table marks those rows as `_skipped_`.\n"
     )
-    lines.append(
-        "- **F-A1 (Approach 1 deferred):** the RGB+Fourier-mask approach (`chandlerbing65nm/FakeImageDetection`) is not in this build. It needs a Linux-only training shell and manual Google Drive download. Planned as a follow-up.\n"
-    )
+    if approach1_present:
+        lines.append(
+            "- **F-A8 (Approach 1 checkpoint rename):** doctor's spec F.5 literally names "
+            "`mask_15/rn50ft_fouriermask.pth`. Upstream `chandlerbing65nm/FakeImageDetection` "
+            "renamed it to `rn50ft_spectralmask.pth` (same Fourier-domain masking, just renamed). "
+            "We use the spectralmask file as the spec-intended successor. "
+            f"Init method recorded as: `{rgb_train.get('init_method', 'n/a')}`.\n"
+        )
+    else:
+        lines.append(
+            "- **F-A1 (Approach 1 deferred):** the RGB+Fourier-mask approach "
+            "(`chandlerbing65nm/FakeImageDetection`) is not in this build. It needs a "
+            "Linux-only training shell and manual Google Drive download. Planned as a "
+            "follow-up.\n"
+        )
     lines.append("\n## 4. Dataset\n")
     lines.append(
         "Per generator targets: 1750 AI + 1750 nature -> `build_splits.py` allocates 1000 train + 250 val + 500 test per class. With 6 generators present, totals are:\n"
@@ -221,6 +248,76 @@ def main():
         f"GAN-avg AP = {_fmt_optional(gan.get('ap'))}, "
         f"StdDev AP = {_fmt_optional(std_ap)}.\n"
     )
+    # ---- Approach 1 + combined section (only if A1 results exist) ----
+    if approach1_present:
+        rgb_agg = rgb_eval.get("aggregates", {})
+        rgb_overall = rgb_agg.get("overall_avg", {})
+        rgb_diff = rgb_agg.get("diffusion_avg", {})
+        rgb_gan = rgb_agg.get("gan_avg", {})
+        rgb_std_ap = rgb_agg.get("std_dev_ap")
+        lines.append("\n## 6.5. Approach 1 (RGB + Fourier mask) results\n")
+        lines.append(
+            "- **Best val AP:** "
+            f"`{_fmt_optional(rgb_train.get('best_ap'))}` at epoch "
+            f"`{rgb_train.get('best_epoch')}` "
+            f"(final epoch {rgb_train.get('final_epoch')}, "
+            f"elapsed {rgb_train.get('elapsed_s', '?')} s).\n"
+            f"- **Init method:** `{rgb_train.get('init_method', 'n/a')}`.\n"
+            f"- **Train samples:** {rgb_train.get('train_n')}, "
+            f"**val:** {rgb_train.get('val_n')}.\n"
+            "- **Best checkpoint:** "
+            "`phases/forensic/outputs/rgb/forensic_rgb_model.pth` (per spec F.11)\n"
+        )
+        if rgb_history:
+            lines.append("\n### Approach 1 training history (per epoch)\n")
+            lines.append("| epoch | train_loss | val_ap | val_acc | lr | patience_left | best |")
+            lines.append("|-------|------------|--------|---------|----|--------------|----|")
+            for r in rgb_history[:30]:
+                star = "*" if r.get("is_best") == "1" else ""
+                lines.append(
+                    f"| {r.get('epoch', '?')} | {r.get('train_loss', '?')} "
+                    f"| {r.get('val_ap', '?')} | {r.get('val_acc', '?')} "
+                    f"| {r.get('lr', '?')} | {r.get('patience_left', '?')} | {star} |"
+                )
+            lines.append("")
+        # Embed RGB training-curves image if present
+        rgb_curves = root / "phases/forensic/outputs/training_curves_rgb.png"
+        if rgb_curves.exists():
+            lines.append("\n### Approach 1 training curves\n")
+            lines.append(
+                "![Training curves for Approach 1: train_loss + val_ap + lr per epoch]"
+                "(outputs/training_curves_rgb.png)\n"
+            )
+        lines.append(
+            f"\nApproach 1 summary aggregates: "
+            f"**Overall AP = {_fmt_optional(rgb_overall.get('ap'))}**, "
+            f"Diffusion-avg AP = {_fmt_optional(rgb_diff.get('ap'))}, "
+            f"GAN-avg AP = {_fmt_optional(rgb_gan.get('ap'))}, "
+            f"StdDev AP = {_fmt_optional(rgb_std_ap)}.\n"
+        )
+        # ---- Combined comparison (F.25 final deliverable) ----
+        lines.append("\n## 6.6. Combined comparison (F.25 final deliverable)\n")
+        if combined_table_md.strip():
+            lines.append(combined_table_md.strip() + "\n")
+        else:
+            lines.append(
+                "_Combined table not yet generated. Run "
+                "`python phases/forensic/scripts/build_combined_eval_table.py`._\n"
+            )
+        # Tiny narrative on which approach wins
+        try:
+            d_ap = float(overall.get("ap"))
+            r_ap = float(rgb_overall.get("ap"))
+            winner = "Approach 1 (RGB+Fourier)" if r_ap > d_ap else "Approach 2 (DCT)"
+            delta = abs(r_ap - d_ap)
+            lines.append(
+                f"\n**Comparison:** Across the 6 evaluated generators, "
+                f"**{winner}** is ahead on Overall AP by **{delta:.4f}** "
+                f"(A1={r_ap:.4f} vs A2={d_ap:.4f}).\n"
+            )
+        except (TypeError, ValueError):
+            pass
+
     lines.append("\n## 7. Discussion\n")
     lines.append(
         "- The detector reaches its best validation AP on the 6 available generators, "

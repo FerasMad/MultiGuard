@@ -31,6 +31,11 @@ def main():
         type=Path,
         default=Path("phases/forensic/outputs/training_curves.png"),
     )
+    p.add_argument(
+        "--title",
+        default="Approach 2 (DCT) training: train_loss + val_ap vs epoch",
+        help="Plot title (default fits Approach 2; override for Approach 1).",
+    )
     args = p.parse_args()
 
     if not args.csv.exists():
@@ -50,18 +55,20 @@ def main():
         rows = list(csv.DictReader(f))
 
     epochs = [int(r["epoch"]) for r in rows]
-    phases = [int(r["phase"]) for r in rows]
     loss = [float(r["train_loss"]) for r in rows]
     val_ap = [float(r["val_ap"]) for r in rows]
     lrs = [float(r["lr"]) for r in rows]
     is_best = [int(r["is_best"]) for r in rows]
 
-    # Find phase 1 -> phase 2 boundary
+    # Find phase 1 -> phase 2 boundary (only if CSV has 'phase' column;
+    # Approach 1 training has no phase, so boundary stays None).
     boundary = None
-    for i, ph in enumerate(phases):
-        if ph == 2 and (i == 0 or phases[i - 1] == 1):
-            boundary = epochs[i]
-            break
+    if rows and "phase" in rows[0]:
+        phases = [int(r["phase"]) for r in rows]
+        for i, ph in enumerate(phases):
+            if ph == 2 and (i == 0 or phases[i - 1] == 1):
+                boundary = epochs[i]
+                break
 
     fig, (ax_top, ax_bot) = plt.subplots(
         2, 1, figsize=(8, 5.5), sharex=True, gridspec_kw={"height_ratios": [3, 1]}
@@ -132,7 +139,7 @@ def main():
             fontsize=8,
         )
 
-    ax_loss.set_title("Approach 2 (DCT) training: train_loss + val_ap vs epoch")
+    ax_loss.set_title(args.title)
     ax_loss.legend(handles=[line_loss, line_ap], loc="center right", fontsize=9)
 
     # ----- bottom panel: lr -----

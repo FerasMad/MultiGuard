@@ -1,0 +1,13 @@
+{
+  "best_ap": 0.997098686732006,
+  "best_epoch": 10,
+  "final_epoch": 15,
+  "init_method": "FakeImageDetection mask_15 ckpt (rn50ft_spectralmask.pth) [deviation F-A8: upstream renamed fouriermask->spectralmask]",
+  "best_ckpt": "phases\\forensic\\outputs\\rgb\\best.pt",
+  "forensic_named_ckpt": "phases\\forensic\\outputs\\rgb\\forensic_rgb_model.pth",
+  "history_csv": "phases\\forensic\\outputs\\rgb\\training_history.csv",
+  "elapsed_s": 1271.2,
+  "train_n": 12000,
+  "val_n": 3000,
+  "seed": 42
+}
