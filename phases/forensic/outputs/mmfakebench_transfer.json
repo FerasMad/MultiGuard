@@ -1,0 +1,148 @@
+{
+  "ckpt": "phases\\forensic\\outputs\\rgb\\forensic_rgb_model.pth",
+  "approach": "rgb",
+  "mm_root": "data\\raw\\MMFakeBench\\MMFakeBench_val",
+  "per_category": {
+    "antifact_image_generation_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.17066568620163944,
+      "frac_above_0.5": 0.16
+    },
+    "chatgpt_match_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.030288637076188275,
+      "frac_above_0.5": 0.04
+    },
+    "coco_image_edit_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.45478064726388995,
+      "frac_above_0.5": 0.44
+    },
+    "coco_text_edit_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.5341180229207615,
+      "frac_above_0.5": 0.56
+    },
+    "DGM4_text_edit_senti_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.0006052202445928484,
+      "frac_above_0.5": 0.0
+    },
+    "Fakeddit_photo_edit_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.04321002500812588,
+      "frac_above_0.5": 0.04
+    },
+    "fever_AI_val_100": {
+      "label": "fake",
+      "n": 100,
+      "mean_p_fake": 0.1289077403420289,
+      "frac_above_0.5": 0.12
+    },
+    "gossipcop_match_val_25": {
+      "label": "fake",
+      "n": 25,
+      "mean_p_fake": 0.00013157233451142444,
+      "frac_above_0.5": 0.0
+    },
+    "gossipcop_midjourney_val_25": {
+      "label": "fake",
+      "n": 25,
+      "mean_p_fake": 0.00027032604679148094,
+      "frac_above_0.5": 0.0
+    },
+    "llm_gossip_md_generation_val_10": {
+      "label": "fake",
+      "n": 10,
+      "mean_p_fake": 1.554418514252698e-05,
+      "frac_above_0.5": 0.0
+    },
+    "llm_rewrite_val_30": {
+      "label": "fake",
+      "n": 30,
+      "mean_p_fake": 0.001492846403991937,
+      "frac_above_0.5": 0.0
+    },
+    "llm_science_md_generation_val_10": {
+      "label": "fake",
+      "n": 10,
+      "mean_p_fake": 0.005006380927893872,
+      "frac_above_0.5": 0.0
+    },
+    "Newsclipings_person_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.002361686565958483,
+      "frac_above_0.5": 0.0
+    },
+    "Newsclipings_scene_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.0006937670232519738,
+      "frac_above_0.5": 0.0
+    },
+    "Newsclipings_semantic_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.001908746875613887,
+      "frac_above_0.5": 0.0
+    },
+    "politicat_match_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.00020168929182454856,
+      "frac_above_0.5": 0.0
+    },
+    "bbc_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.06665643514044761,
+      "frac_above_0.5": 0.06
+    },
+    "coco_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.1352828263693729,
+      "frac_above_0.5": 0.14
+    },
+    "fakeddit_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.31386903408483224,
+      "frac_above_0.5": 0.32
+    },
+    "guardian_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.06197062330584597,
+      "frac_above_0.5": 0.06
+    },
+    "usa_today_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.03127245220233739,
+      "frac_above_0.5": 0.02
+    },
+    "wash_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.04771391994057239,
+      "frac_above_0.5": 0.06
+    }
+  },
+  "aggregate": {
+    "overall_ap": 0.6975471791106171,
+    "overall_auc": 0.4989,
+    "overall_acc_at_0.5": 0.341,
+    "n_total": 1000,
+    "n_fake": 700,
+    "n_real": 300
+  },
+  "note": "MMFakeBench's 'fake' label includes AI-generation, tampering, and text-only attacks. The forensic detector classifies real-vs-AI-image, so categories where the image is real (e.g. DGM4_text_edit_senti, NewsCLIPpings_*) should correctly score low p(fake) by the detector, even though MMFakeBench labels them 'fake'."
+}

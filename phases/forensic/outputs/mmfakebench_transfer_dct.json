@@ -1,0 +1,148 @@
+{
+  "ckpt": "phases\\forensic\\outputs\\dct\\forensic_dct_model.pth",
+  "approach": "dct",
+  "mm_root": "data\\raw\\MMFakeBench\\MMFakeBench_val",
+  "per_category": {
+    "antifact_image_generation_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.2119212852736079,
+      "frac_above_0.5": 0.22
+    },
+    "chatgpt_match_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.05676856842121872,
+      "frac_above_0.5": 0.06
+    },
+    "coco_image_edit_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.44965316851888276,
+      "frac_above_0.5": 0.46
+    },
+    "coco_text_edit_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.3492350598538037,
+      "frac_above_0.5": 0.36
+    },
+    "DGM4_text_edit_senti_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.21858438656416007,
+      "frac_above_0.5": 0.22
+    },
+    "Fakeddit_photo_edit_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.11459617735221238,
+      "frac_above_0.5": 0.12
+    },
+    "fever_AI_val_100": {
+      "label": "fake",
+      "n": 100,
+      "mean_p_fake": 0.15018277878427613,
+      "frac_above_0.5": 0.15
+    },
+    "gossipcop_match_val_25": {
+      "label": "fake",
+      "n": 25,
+      "mean_p_fake": 0.05655415203421692,
+      "frac_above_0.5": 0.04
+    },
+    "gossipcop_midjourney_val_25": {
+      "label": "fake",
+      "n": 25,
+      "mean_p_fake": 0.010307699083050998,
+      "frac_above_0.5": 0.0
+    },
+    "llm_gossip_md_generation_val_10": {
+      "label": "fake",
+      "n": 10,
+      "mean_p_fake": 0.0030666485399933664,
+      "frac_above_0.5": 0.0
+    },
+    "llm_rewrite_val_30": {
+      "label": "fake",
+      "n": 30,
+      "mean_p_fake": 0.10152953934234536,
+      "frac_above_0.5": 0.1
+    },
+    "llm_science_md_generation_val_10": {
+      "label": "fake",
+      "n": 10,
+      "mean_p_fake": 0.027507697300680877,
+      "frac_above_0.5": 0.0
+    },
+    "Newsclipings_person_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.0013578110363599823,
+      "frac_above_0.5": 0.0
+    },
+    "Newsclipings_scene_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.006975983679614455,
+      "frac_above_0.5": 0.0
+    },
+    "Newsclipings_semantic_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.07736999111516538,
+      "frac_above_0.5": 0.08
+    },
+    "politicat_match_val_50": {
+      "label": "fake",
+      "n": 50,
+      "mean_p_fake": 0.00048023678471850186,
+      "frac_above_0.5": 0.0
+    },
+    "bbc_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.09825063944844314,
+      "frac_above_0.5": 0.1
+    },
+    "coco_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.19525415982539643,
+      "frac_above_0.5": 0.22
+    },
+    "fakeddit_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.2879008652041763,
+      "frac_above_0.5": 0.28
+    },
+    "guardian_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.001196556620105863,
+      "frac_above_0.5": 0.0
+    },
+    "usa_today_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.06021477016847156,
+      "frac_above_0.5": 0.06
+    },
+    "wash_val_50": {
+      "label": "real",
+      "n": 50,
+      "mean_p_fake": 0.06175010715491778,
+      "frac_above_0.5": 0.06
+    }
+  },
+  "aggregate": {
+    "overall_ap": 0.7165778843482034,
+    "overall_auc": 0.5141261904761905,
+    "overall_acc_at_0.5": 0.359,
+    "n_total": 1000,
+    "n_fake": 700,
+    "n_real": 300
+  },
+  "note": "MMFakeBench's 'fake' label includes AI-generation, tampering, and text-only attacks. The forensic detector classifies real-vs-AI-image, so categories where the image is real (e.g. DGM4_text_edit_senti, NewsCLIPpings_*) should correctly score low p(fake) by the detector, even though MMFakeBench labels them 'fake'."
+}

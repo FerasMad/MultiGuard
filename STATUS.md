@@ -20,6 +20,32 @@ across generators (StdDev 0.0023 vs 0.0158). Both approaches pass the
 doctor's spec; A1 is more consistent across diffusion generators, A2 is more
 interpretable (frequency-domain input).
 
+### External validation — MMFakeBench transfer probe
+
+Both detectors evaluated on `MMFakeBench_val` (700 fake + 300 real images):
+
+| Detector | Overall AP | Overall AUC | Notes |
+|----------|-----------|-------------|-------|
+| Approach 1 (RGB+Fourier) | 0.6975 | 0.499 | Domain bias visible |
+| Approach 2 (DCT)         | 0.7166 | 0.514 | Same pattern |
+
+**Honest finding:** Both detectors struggle to transfer out of distribution.
+Mean p(fake) on truly AI-generated subcategories (`antifact_image_generation`,
+`fever_AI`, `llm_*_generation`) is 0.00–0.17 — they don't fire strongly on
+AI images from different generation pipelines than GenImage_v2 trained on.
+
+This matches the F-A3 caveat about VisualNews-as-nature: the detectors
+likely learned a partial "VisualNews real photo vs GenImage AI image"
+boundary instead of universal forensic features. For per-generator AP
+inside the GenImage_v2 distribution they're excellent; for novel AI
+generators the score collapses. See
+`phases/forensic/outputs/mmfakebench_transfer{,_dct}.json` for per-category
+breakdowns.
+
+**Mitigation path:** retrain with ImageNet "nature" + a wider AI-source
+mix (FOLLOWUP C). Recommended for next iteration before the model is
+considered for live deployment.
+
 **V4 multimodal pipeline** (5-class detector, V3.1 spec):
 - Code + tests + V4 docs all on disk; CI green.
 - `dct_forensic_v1` encoder wrapper added - `forensic_dct_model.pth` is now
