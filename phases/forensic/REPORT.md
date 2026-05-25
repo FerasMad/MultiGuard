@@ -79,6 +79,13 @@ Per-generator data sources:
 - **Best checkpoint:** `phases/forensic/outputs/dct/forensic_dct_model.pth` (per spec F.22)
 
 
+### Training curves
+
+![Training curves: train_loss + val_ap + lr per epoch](outputs/training_curves.png)
+
+Stars mark new best val-AP epochs. Green shaded region = Phase 2 (epoch 6+, optimizer reinit, grad clip on). Bottom panel shows ReduceLROnPlateau cutting the LR three times.
+
+
 ### Training history (per epoch)
 
 | epoch | phase | train_loss | val_ap | val_acc | lr | patience_left | best |
@@ -165,7 +172,10 @@ python phases/forensic/scripts/train_dct.py --out-dir phases/forensic/outputs/dc
 python phases/forensic/scripts/eval_dct.py \
     --ckpt phases/forensic/outputs/dct/forensic_dct_model.pth
 
-# 7. Build this report
+# 7. (optional) Plot training curves
+python phases/forensic/scripts/plot_training.py
+
+# 8. Build this report
 python phases/forensic/scripts/build_handoff_report.py
 ```
 

@@ -184,6 +184,18 @@ def main():
         f"- **Val samples:** {val_n}\n"
         "- **Best checkpoint:** `phases/forensic/outputs/dct/forensic_dct_model.pth` (per spec F.22)\n"
     )
+    # Embed training-curves image if present
+    curves_path = root / "phases/forensic/outputs/training_curves.png"
+    if curves_path.exists():
+        lines.append("\n### Training curves\n")
+        lines.append(
+            "![Training curves: train_loss + val_ap + lr per epoch](outputs/training_curves.png)\n"
+        )
+        lines.append(
+            "Stars mark new best val-AP epochs. Green shaded region = Phase 2 "
+            "(epoch 6+, optimizer reinit, grad clip on). Bottom panel shows "
+            "ReduceLROnPlateau cutting the LR three times.\n"
+        )
     if history:
         lines.append("\n### Training history (per epoch)\n")
         lines.append(
@@ -250,7 +262,10 @@ def main():
         "python phases/forensic/scripts/eval_dct.py \\\n"
         "    --ckpt phases/forensic/outputs/dct/forensic_dct_model.pth\n"
         "\n"
-        "# 7. Build this report\n"
+        "# 7. (optional) Plot training curves\n"
+        "python phases/forensic/scripts/plot_training.py\n"
+        "\n"
+        "# 8. Build this report\n"
         "python phases/forensic/scripts/build_handoff_report.py\n"
         "```\n"
     )
@@ -294,7 +309,16 @@ def main():
         try:
             import pypandoc
 
-            pypandoc.convert_file(str(args.out_md), "docx", outputfile=str(args.out_docx))
+            # Pass resource-path so pandoc can resolve relative image paths
+            # inside REPORT.md (e.g. `outputs/training_curves.png` should
+            # resolve to phases/forensic/outputs/training_curves.png).
+            md_dir = str(args.out_md.parent.resolve())
+            pypandoc.convert_file(
+                str(args.out_md),
+                "docx",
+                outputfile=str(args.out_docx),
+                extra_args=[f"--resource-path={md_dir}"],
+            )
             print(f"Wrote {args.out_docx} (via pypandoc)")
         except ImportError:
             print(
