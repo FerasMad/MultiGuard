@@ -1,0 +1,160 @@
+PHASE 3 ARCHITECTURE  -  V3 MULTIMODAL FAKE-NEWS DETECTOR  (ASCII)
+====================================================================================================
+
+Legend:  [FROZEN] = frozen encoder      [TRAIN] = trainable Stage-2 module
+         (tensor) = intermediate tensor       . . . > = training-only path
+
+INPUTS
+------
+
+  +-----------------------+                                +--------------------------+
+  |  Text (article)       |                                |  Image (uploaded         |
+  |                       |                                |  JPG / PNG)              |
+  +-----------+-----------+                                +-------------+------------+
+              |                                                          |
+              |                                                          |
+   +----------+----------+----------+              +----------+----------+----------+
+   |                     |          |              |                     |          |
+   v                     v          v              v                     v          v
++--------+         +---------+   +--------+   +-----------+        +-----------+   +-------------------+
+| BERT   |         | CLIP    |   | Qwen   |   | Image     |        | CLIP      |   | JPEG q=85         |
+| tokens |         | tokens  |   | tokens |   | [3,224,   |        | pixels    |   | + BGR->YCbCr (Y)  |
+| (ids,  |         | (ids,   |   | (left- |   |   224]    |        | [3,224,   |   | + 8x8 patch       |
+| mask)  |         | mask)   |   | pad,   |   |           |        |   224]    |   |   log|DCT|+1e-8   |
+|        |         |         |   | max=   |   |           |        |           |   | + per-image       |
+|        |         |         |   |  512)  |   |           |        |           |   |   min-max         |
++---+----+         +----+----+   +---+----+   +-----+-----+        +-----+-----+   |   = [1,224,224]   |
+    |                   |            |              |                    |         +---------+---------+
+    |                   |            |              |                    |                   |
+    v                   v            v              v                    v                   v
++================================================+ +============================+ +===============================+
+| FND-CLIP  [FROZEN]  (V1 best.pt)               | | Qwen2-7B-Instruct [FROZEN] | | UnivFD on patch-DCT [FROZEN]  |
+|                                                | |                            | | (Stage-1 best.pt)             |
+|   forward_semantic(image, bert_ids, bert_mask, | |   28 transformer blocks    | |                               |
+|                    clip_pixels, clip_ids,      | |   hidden_size = 3584       | |   ResNet50                    |
+|                    clip_mask)                  | |   output_hidden_states     | |     conv1: 1-ch (Kaiming)     |
+|                                                | |     = True                 | |     blur_jpg_v0 (strict=False)|
+|   visual stream + text stream                  | |   hidden_states[-1]        | |   fc -> Flatten               |
+|   + CLIP semantic pair (sim weighting)         | |   + masked-mean pool       | |        -> Dropout(0.3)        |
+|   + modality attention pooling                 | |     over attention_mask    | |        -> Linear(2048 -> 768) |
++======================+=========================+ +==============+=============+ +===============+===============+
+                       |                                          |                               |
+                       v                                          v                               v
+            (v_semantic  [B, 512])                      (v_textfor [B, 3584])             (v_imgfor [B, 768])
+                       |                                          |                               |
+                       |                                          |                               |
+                       v                                          v                               |
+        +--------------+-------------+              +-------------+--------------+                |
+        | sem_proj          [TRAIN]  |              | text_proj         [TRAIN]  |                |
+        | Linear(512 -> 768) + GELU  |              | Linear(3584 -> 768) + GELU |                |
+        +--------------+-------------+              +-------------+--------------+                |
+                       |                                          |                               |
+                       v                                          v                               |
+            (v_semantic_768 [B, 768])                  (v_textfor_768 [B, 768])                   |
+                       |                                          |                               |
+                       |                                          |                               |
++======================|==========================================|===============================|=====================+
+| V3FusionModule [TRAIN]                                                                                                |
+|                      v                                          v                               v                     |
+|              +-------+------+                          +--------+-----+                  +------+-------+              |
+|              | LayerNorm    |                          | LayerNorm    |                  | LayerNorm    |              |
+|              | (768)        |                          | (768)        |                  | (768)        |              |
+|              +---+----+-----+                          +---+------+---+                  +------+-+-----+              |
+|                  |    |                                    |      |                             | |                    |
+|                  |    |     +------------------------------+      |          +------------------+ |                    |
+|                  |    |     |                                     |          |                    |                    |
+|                  |    v     v                                     v          v                    v                    |
+|                  |  +--+----+----+                              +-+---+---+--+                +---+----+               |
+|                  |  | Pair 1     |                              | Pair 2  |                   | Pair 3  |              |
+|                  +->| sem <-> img|                              | sem <-> |                   | img <-> |              |
+|                     | xattn 8h   |                              | text    |                   | text    |              |
+|                     | bidir SUM  |                              | xattn   |                   | xattn   |              |
+|                     | + LayerNorm|                              | bidir+LN|                   | bidir+LN|              |
+|                     | -> r1[B,768|                              | -> r2   |                   | -> r3   |              |
+|                     +-----+------+                              +----+----+                   +----+----+              |
+|                           |                                          |                             |                   |
+|                           +-----------+         +--------------------+         +-------------------+                   |
+|                                       |         |                              |                                       |
+|                                       v         v                              v                                       |
+|                                +------+---------+------------------------------+------+                                |
+|                                | stack[r1, r2, r3]  -> [B, 3, 768]                    |                                |
+|                                | permute            -> [B, 768, 3]                    |                                |
+|                                +------------------------+----------------------------+                                |
+|                                                         |                                                              |
+|                                                         v                                                              |
+|                                  +----------------------+----------------------+                                       |
+|                                  | Conv1d(768 -> 768, k=3, p=1) + GELU         |                                       |
+|                                  +----------------------+----------------------+                                       |
+|                                                         |                                                              |
+|                                                         v                                                              |
+|                                  +----------------------+----------------------+                                       |
+|                                  | Conv1d(768 -> 1024, k=1)    + GELU          |                                       |
+|                                  +----------------------+----------------------+                                       |
+|                                                         |                                                              |
+|                                                         v                                                              |
+|                                  +----------------------+----------------------+                                       |
+|                                  | AdaptiveAvgPool1d(1)    fused = [B, 1024]   |                                       |
+|                                  +----------------------+----------------------+                                       |
+|                                                         |                                                              |
+|                          +==============================|===============================+                              |
+|                          | V3Classifier (MLP head) [TRAIN]                              |                              |
+|                          |                              v                               |                              |
+|                          |   +--------------------------+--------------------------+    |                              |
+|                          |   | Linear(1024 -> 512) + BatchNorm + GELU + Drop(0.5)  |    |                              |
+|                          |   +--------------------------+--------------------------+    |                              |
+|                          |                              |                               |                              |
+|                          |                              v                               |                              |
+|                          |   +--------------------------+--------------------------+    |                              |
+|                          |   | Linear( 512 -> 256) + GELU                          |    |                              |
+|                          |   +--------------------------+--------------------------+    |                              |
+|                          |                              |                               |                              |
+|                          |                              v                               |                              |
+|                          |   +--------------------------+--------------------------+    |                              |
+|                          |   | Linear( 256 ->   5)                                 |    |                              |
+|                          |   +--------------------------+--------------------------+    |                              |
+|                          +==============================|===============================+                              |
++=========================================================|==============================================================+
+                                                          |
+                                                          v
+                                              (main_logits [B, 5])
+                                                          |
+                                                          v
+                                  +-----------------------+-----------------------+
+                                  | softmax over 5 classes:                       |
+                                  |   p(Real, OOC, Manip, AI-Text, Double-Fake)   |
+                                  +-----------------------------------------------+
+
+
+AUX HEAD  (training only, gradient-isolated)
+--------------------------------------------
+
+  (v_imgfor [B, 768])  . . . v_imgfor.detach() . . . >  +---------------------------+
+                                                        | Linear(768 -> 2) [TRAIN]  |
+                                                        | aux_logits [B, 2]         |
+                                                        | BCE on binary             |
+                                                        | "image is AI / tampered"  |
+                                                        | (class in {2, 4})         |
+                                                        +---------------------------+
+
+  Training loss:  L  =  CE(main_logits, label)  +  0.1 * BCE(aux_logits, one_hot(binary_label))
+
+
+CLASS DEFINITIONS (5-class)
+---------------------------
+
+  0  Real              Authentic news: original image paired with its true caption.
+  1  Out-of-Context    Authentic image + authentic caption, never actually paired (mismatched event/entity).
+  2  Manipulated       Image edited / spliced / tampered (digital forgery); text is human-written.
+  3  AI-Text           Image authentic; caption / article text generated or rewritten by an LLM.
+  4  Fully-Fabricated  "Double-Fake" - image is AI-generated (or tampered) AND text is LLM-generated.
+
+
+NUMBERS (rev 12 canonical)
+--------------------------
+
+  Test F1-macro (RoBERTa V3.1)  ........................  0.5391
+  Qwen rev 11 F1-macro  ................................  0.5377
+  Class 4 F1 (Fully-Fabricated / Double-Fake)  .........  0.995   <-- persists even after caption-rewrite c4fix
+                                                                       (shortcut is on the IMAGE side: GenImage / Midjourney fingerprint)
+  Real <-> OOC ceiling (structural to NewsCLIPpings)  ..  ~0.42
+  MMFakeBench transfer F1-macro (OOD generalization)  ..  0.3832

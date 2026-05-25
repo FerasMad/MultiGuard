@@ -86,3 +86,9 @@ outputs/v1_results/v1_5class_test_metrics.yaml
 
 # Misc top-level configs that aren't part of the pipeline
 config/settings.yaml
+
+# Pre-unification additions (heavy generated artifacts)
+v3/cache/
+v3/outputs/
+.venv-qwen-py312/
+articles.tar.gz

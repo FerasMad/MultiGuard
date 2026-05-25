@@ -1,0 +1,42 @@
+[
+  {
+    "label": 0,
+    "name": "real",
+    "file": "0_real.jpg",
+    "sample_id": "nclip_411055_411055",
+    "source": "NewsCLIPpings_genuine (test)",
+    "text": "Tsvetana Pironkova of Bulgaria in action against Johanna Larsson of Sweden"
+  },
+  {
+    "label": 1,
+    "name": "ooc",
+    "file": "1_ooc.jpg",
+    "sample_id": "nclip_275448_1219002",
+    "source": "NewsCLIPpings_OOC (test)",
+    "text": "Oct 11 Tim Tebow waits 13minutes for EMTs to respond to a fan who passedout following his debut"
+  },
+  {
+    "label": 2,
+    "name": "manipulated",
+    "file": "2_manipulated.jpg",
+    "sample_id": "dgm4_743156",
+    "source": "DGM4_face_attribute (test)",
+    "text": "It s a tie do you want ketchup or mustard with your Republican red meat"
+  },
+  {
+    "label": 3,
+    "name": "ai-text",
+    "file": "3_ai-text.png",
+    "sample_id": "mmfb_test_03063",
+    "source": "MMFakeBench_textual_test (test)",
+    "text": "Sarah Hyland attended a public school in Chinatown."
+  },
+  {
+    "label": 4,
+    "name": "fully-fabricated",
+    "file": "4_fully-fabricated.jpg",
+    "sample_id": "genimage_mj_003598",
+    "source": "GenImage_MidJourney (test)",
+    "text": "a coffee table next to a sidewalk with the sun in the background"
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "accuracy": 0.6636666666666666,
+  "f1_ai": 0.49474211316975464,
+  "f1_macro": 0.6213405794427339,
+  "precision_ai": 0.993963782696177,
+  "recall_ai": 0.3293333333333333,
+  "auc_roc": 0.966023111111111,
+  "confusion_matrix": [
+    [
+      1497,
+      3
+    ],
+    [
+      1006,
+      494
+    ]
+  ],
+  "n_samples": 3000,
+  "n_failed": 0,
+  "per_source": {
+    "GenImage_MidJourney": {
+      "n": 1500,
+      "accuracy": 0.3293333333333333,
+      "mean_p_fake": 0.48028780273596444
+    },
+    "NewsCLIPpings_genuine": {
+      "n": 1500,
+      "accuracy": 0.998,
+      "mean_p_fake": 0.28310557997475067
+    }
+  }
+}

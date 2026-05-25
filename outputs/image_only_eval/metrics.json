@@ -1,0 +1,65 @@
+{
+  "device": "cuda",
+  "n_samples": 2475,
+  "n_failed": 0,
+  "binary_metrics": {
+    "accuracy": 0.6561616161616162,
+    "f1_fake": 0.25806451612903225,
+    "f1_macro": 0.5171469043963595,
+    "precision_fake": 0.9426751592356688,
+    "recall_fake": 0.1494949494949495,
+    "auc_roc": 0.7576315341971908,
+    "confusion_matrix": [
+      [
+        1476,
+        9
+      ],
+      [
+        842,
+        148
+      ]
+    ]
+  },
+  "per_original_class": {
+    "0": {
+      "name": "Real",
+      "n": 495,
+      "image_is_fake_ground_truth": false,
+      "mean_p_fake": 0.280536897051515,
+      "pct_predicted_fake": 0.00404040404040404,
+      "accuracy_on_slice": 0.9959595959595959
+    },
+    "1": {
+      "name": "Out-of-Context",
+      "n": 495,
+      "image_is_fake_ground_truth": false,
+      "mean_p_fake": 0.2902892220953498,
+      "pct_predicted_fake": 0.00808080808080808,
+      "accuracy_on_slice": 0.9919191919191919
+    },
+    "2": {
+      "name": "Manipulated",
+      "n": 495,
+      "image_is_fake_ground_truth": true,
+      "mean_p_fake": 0.30006041188884264,
+      "pct_predicted_fake": 0.00808080808080808,
+      "accuracy_on_slice": 0.00808080808080808
+    },
+    "3": {
+      "name": "AI-Text",
+      "n": 495,
+      "image_is_fake_ground_truth": false,
+      "mean_p_fake": 0.2774905648345899,
+      "pct_predicted_fake": 0.006060606060606061,
+      "accuracy_on_slice": 0.9939393939393939
+    },
+    "4": {
+      "name": "Fully-Fabricated",
+      "n": 495,
+      "image_is_fake_ground_truth": true,
+      "mean_p_fake": 0.4753915159991293,
+      "pct_predicted_fake": 0.2909090909090909,
+      "accuracy_on_slice": 0.2909090909090909
+    }
+  }
+}
