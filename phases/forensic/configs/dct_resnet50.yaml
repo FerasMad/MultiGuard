@@ -1,0 +1,48 @@
+# Approach 2 (DCT) training config — doctor's spec F.10/F.19-F.22.
+#
+# Key constants are also hardcoded in forensic/training/two_phase_trainer.py
+# (PHASE1_EPOCHS, PHASE1_LR, PHASE2_LR, etc.). This file controls run-time
+# choices like max_epochs, batch_size, num_workers.
+
+seed: 42
+stage: forensic_dct
+
+train:
+  # Doctor spec: max 30 epochs, early-stop patience=5 (handled in trainer)
+  max_epochs: 30
+  # Doctor spec: batch 64 (locked decision D7)
+  batch_size: 64
+  # DataLoader workers (Windows tip: keep <= 4 to avoid spawn overhead)
+  num_workers: 4
+  pin_memory: true
+  # Precision: fp32 per locked decision D6 (safer with fresh 1-ch conv1)
+  precision: fp32
+
+# Hyperparameters baked into TwoPhaseTrainer (here for reference / audit):
+#   Phase 1 (epochs 1-5):
+#     lr = 1e-4   (PHASE1_LR)
+#     weight_decay = 1e-4
+#     trainable = conv1, bn1, layer3, layer4, fc
+#     frozen    = layer1, layer2
+#     scheduler = ReduceLROnPlateau(mode='max', factor=0.5, patience=3) on val AP
+#     no gradient clipping
+#   Phase 2 (epochs 6+):
+#     lr = 1e-5  (PHASE2_LR, reinit AdamW)
+#     all params trainable
+#     scheduler reinit
+#     grad clip max_norm = 1.0 every batch
+#   Early-stop:
+#     patience = 5 on val AP, CARRIES across phase boundary
+
+eval:
+  batch_size: 64
+  num_workers: 2
+
+# Output paths
+paths:
+  out_dir: phases/forensic/outputs/dct
+  forensic_checkpoint: phases/forensic/outputs/dct/forensic_dct_model.pth
+  dct_stats: phases/forensic/data/dct_stats.json
+  cache_train: phases/forensic/data/dct_cache/train
+  cache_val:   phases/forensic/data/dct_cache/val
+  cache_test:  phases/forensic/data/dct_cache/test
