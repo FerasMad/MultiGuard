@@ -15,35 +15,35 @@ Synthesized from `docs/doctor-briefs/*.pdf` during the unified mega-repo restruc
 
 | ID | Requirement | Status | File / Artifact |
 |----|-------------|--------|-----------------|
-| F.1 | Dataset structure: 3 non-overlapping trees | Pending P5 | `phases/forensic/data/genimage_{train,test}/` |
-| F.2 | 8 generators in test: midjourney, sdv1_4, sdv1_5, wukong, vqdm, biggan, adm, glide | Pending P5 | `phases/forensic/data/genimage_test/<gen>/` |
-| F.3 | Real class = ImageNet "nature" (bundled per-generator in GenImage release) | Pending P5 | Data layout |
+| F.1 | Dataset structure: 3 non-overlapping trees | Done (6 of 8 gens) | `phases/forensic/data/genimage_{train,test}/` |
+| F.2 | 8 generators in test: midjourney, sdv1_4, sdv1_5, wukong, vqdm, biggan, adm, glide | Partial (6 of 8; sdv1_4/sdv1_5 SKIPPED — bitmind 404; see F-A2) | `phases/forensic/data/genimage_test/<gen>/` |
+| F.3 | Real class = ImageNet "nature" (bundled per-generator in GenImage release) | Substituted (VisualNews; deviation F-A3 in DECISIONS.md) | Data layout |
 | **Approach 1 — RGB + Fourier Mask** | | | |
-| F.4 | Fine-tune chandlerbing65nm/FakeImageDetection RN50 with Fourier masking | Pending P5 | `phases/forensic/external/FakeImageDetection/` |
-| F.5 | Use checkpoint `mask_15/rn50ft_fouriermask.pth` exactly (do not rename) | Pending P5 | External clone |
-| F.6 | Freeze conv1/bn1/layer1/layer2, train layer3/layer4/fc only | Pending P5 | Adapted `train.py` |
-| F.7 | `model.change_output(1)` after loading weights (do NOT manually create nn.Linear) | Pending P5 | Adapted `train.py` |
-| F.8 | Fourier masking 50% probability, mask_ratio=0.15, training-only | Pending P5 | Use repo's `augment.py` + `mask.py` |
-| F.9 | Preprocessing: Resize 224x224 bilinear, ToTensor, Normalize ImageNet stats | Pending P5 | Adapted `dataset.py` |
-| F.10 | Hyperparams: BCEWithLogitsLoss, AdamW lr=1e-4 wd=1e-4, batch=64, max 30 epochs, ReduceLROnPlateau (mode=max, factor=0.5, patience=3, monitors val AP), early-stop patience=5 | Pending P5 | `phases/forensic/configs/rgb_fourier.yaml` |
-| F.11 | Output filename: `forensic_rgb_model.pth` | Pending P5 | `phases/forensic/outputs/` |
+| F.4 | Fine-tune chandlerbing65nm/FakeImageDetection RN50 with Fourier masking | Deferred (F-A1) — see FOLLOWUP.md B | `phases/forensic/external/FakeImageDetection/` |
+| F.5 | Use checkpoint `mask_15/rn50ft_fouriermask.pth` exactly (do not rename) | Deferred | External clone |
+| F.6 | Freeze conv1/bn1/layer1/layer2, train layer3/layer4/fc only | Deferred | Adapted `train.py` |
+| F.7 | `model.change_output(1)` after loading weights (do NOT manually create nn.Linear) | Deferred | Adapted `train.py` |
+| F.8 | Fourier masking 50% probability, mask_ratio=0.15, training-only | Deferred | Use repo's `augment.py` + `mask.py` |
+| F.9 | Preprocessing: Resize 224x224 bilinear, ToTensor, Normalize ImageNet stats | Deferred | Adapted `dataset.py` |
+| F.10 | Hyperparams: BCEWithLogitsLoss, AdamW lr=1e-4 wd=1e-4, batch=64, max 30 epochs, ReduceLROnPlateau (mode=max, factor=0.5, patience=3, monitors val AP), early-stop patience=5 | Deferred | `phases/forensic/configs/rgb_fourier.yaml` |
+| F.11 | Output filename: `forensic_rgb_model.pth` | Deferred | `phases/forensic/outputs/` |
 | **Approach 2 — DCT Frequency Domain** | | | |
-| F.12 | torchvision ResNet50 with `weights='IMAGENET1K_V1'`, NOT FakeImageDetection's RN50 | Pending P5 | `phases/forensic/src/forensic/models/dct_resnet50.py` |
-| F.13 | conv1 in_channels 3->1, Kaiming Normal (mode='fan_out', nonlinearity='relu') | Pending P5 | Same |
-| F.14 | Load ImageNet weights strict=False skipping conv1 | Pending P5 | Same |
-| F.15 | fc replaced with `Linear(2048, 1)` no activation | Pending P5 | Same |
-| F.16 | DCT recipe: Resize 224x224 bilinear -> YCbCr Y channel float32 [0,255] -> Set A (8x8) + Set B (16x16) -> scipy.fftpack.dct type=2 norm='ortho' patch-level -> log(\|coef\|+1e-8) -> reassemble each set to [224,224] -> element-wise average -> [1,224,224] | Pending P5 | `phases/forensic/src/forensic/preprocessing/dual_dct.py` |
-| F.17 | Z-score: compute global DCT_mean + DCT_std from `genimage_train/train/` only, save to `dct_stats.json`, apply `(t-mean)/(std+1e-8)` at every stage | Pending P5 | `dct_stats.json` |
-| F.18 | .pt cache: float32, shape [1,224,224], precomputed for train/val/test (never recomputed) | Pending P5 | `phases/forensic/data/dct_cache/` |
-| F.19 | Phase 1 (epochs 1-5): conv1/bn1/layer3/layer4/fc trainable; layer1/layer2 frozen; AdamW lr=1e-4 wd=1e-4; BCEWithLogitsLoss; batch=64; ReduceLROnPlateau (mode=max factor=0.5 patience=3); no gradient clipping; num_workers=4 pin_memory=True | Pending P5 | `two_phase_trainer.py` |
-| F.20 | Phase 2 transition at START of epoch 6: unfreeze layer1/layer2, **reinitialize** AdamW with ALL params at lr=1e-5 wd=1e-4, **reinitialize** ReduceLROnPlateau, enable gradient clipping max_norm=1.0 every batch | Pending P5 | `two_phase_trainer.py` |
-| F.21 | Early-stop: patience=5 on val AP, **continues across phase boundary** (do NOT reset patience counter) | Pending P5 | `two_phase_trainer.py` |
-| F.22 | Outputs: `forensic_dct_model.pth` (best by val AP) + `dct_stats.json` | Pending P5 | `phases/forensic/outputs/` |
+| F.12 | torchvision ResNet50 with `weights='IMAGENET1K_V1'`, NOT FakeImageDetection's RN50 | Done | `phases/forensic/src/forensic/models/dct_resnet50.py` |
+| F.13 | conv1 in_channels 3->1, Kaiming Normal (mode='fan_out', nonlinearity='relu') | Done | Same |
+| F.14 | Load ImageNet weights strict=False skipping conv1 | Done | Same |
+| F.15 | fc replaced with `Linear(2048, 1)` no activation | Done | Same |
+| F.16 | DCT recipe: Resize 224x224 bilinear -> YCbCr Y channel float32 [0,255] -> Set A (8x8) + Set B (16x16) -> scipy.fftpack.dct type=2 norm='ortho' patch-level -> log(\|coef\|+1e-8) -> reassemble each set to [224,224] -> element-wise average -> [1,224,224] | Done (test_dual_dct_shape.py 6/6) | `phases/forensic/src/forensic/preprocessing/dual_dct.py` |
+| F.17 | Z-score: compute global DCT_mean + DCT_std from `genimage_train/train/` only, save to `dct_stats.json`, apply `(t-mean)/(std+1e-8)` at every stage | Done (mean=0.119 std=2.73, 602M scalars) | `phases/forensic/data/dct_stats.json` |
+| F.18 | .pt cache: float32, shape [1,224,224], precomputed for train/val/test (never recomputed) | Done (21K shards, 43s with 4 spawn workers) | `phases/forensic/data/dct_cache/` |
+| F.19 | Phase 1 (epochs 1-5): conv1/bn1/layer3/layer4/fc trainable; layer1/layer2 frozen; AdamW lr=1e-4 wd=1e-4; BCEWithLogitsLoss; batch=64; ReduceLROnPlateau (mode=max factor=0.5 patience=3); no gradient clipping; num_workers=4 pin_memory=True | Done (test_two_phase_trainer 6/6) | `two_phase_trainer.py` |
+| F.20 | Phase 2 transition at START of epoch 6: unfreeze layer1/layer2, **reinitialize** AdamW with ALL params at lr=1e-5 wd=1e-4, **reinitialize** ReduceLROnPlateau, enable gradient clipping max_norm=1.0 every batch | Done (4 invariants asserted by tests) | `two_phase_trainer.py` |
+| F.21 | Early-stop: patience=5 on val AP, **continues across phase boundary** (do NOT reset patience counter) | Done (EarlyStopState dataclass, observed at epoch 6) | `two_phase_trainer.py` |
+| F.22 | Outputs: `forensic_dct_model.pth` (best by val AP) + `dct_stats.json` | Done (best val AP 0.9848 @ epoch 13, ES @ epoch 18) | `phases/forensic/outputs/dct/forensic_dct_model.pth` |
 | **Evaluation (both approaches)** | | | |
-| F.23 | Per generator: AP (sklearn `average_precision_score`), Accuracy at threshold 0.5, AUC (sklearn `roc_auc_score`) | Pending P5 | `per_generator.py` |
-| F.24 | Aggregates: Overall avg, GAN avg (BigGAN only), Diffusion avg (other 7), Std Dev of AP across 8 generators | Pending P5 | `per_generator.py` + `table.py` |
-| F.25 | Eval table format: rows = 8 generators + 4 summary; columns = AP, Accuracy, AUC | Pending P5 | `phases/forensic/outputs/eval_table.md` |
-| F.26 | Inference: load best ckpt, eval mode, torch.no_grad, sigmoid outputs | Pending P5 | Both eval scripts |
+| F.23 | Per generator: AP (sklearn `average_precision_score`), Accuracy at threshold 0.5, AUC (sklearn `roc_auc_score`) | Done (Approach 2 only) | `per_generator.py` |
+| F.24 | Aggregates: Overall avg, GAN avg (BigGAN only), Diffusion avg (other 7), Std Dev of AP across 8 generators | Done (Overall AP 0.9863, GAN 0.9998, Diffusion 0.9836, StdDev 0.0158) | `per_generator.py` + `table.py` |
+| F.25 | Eval table format: rows = 8 generators + 4 summary; columns = AP, Accuracy, AUC | Done (sdv1_4/sdv1_5 = _skipped_; Approach 2 only) | `phases/forensic/outputs/eval_table.md` |
+| F.26 | Inference: load best ckpt, eval mode, torch.no_grad, sigmoid outputs | Done | `phases/forensic/scripts/eval_dct.py` |
 
 ---
 
@@ -127,7 +127,9 @@ Synthesized from `docs/doctor-briefs/*.pdf` during the unified mega-repo restruc
 
 ## Outstanding gaps (nothing the doctor asked for is currently missing on disk)
 
-- WARN: Approach 1 + Approach 2 forensic checkpoints + `dct_stats.json` + eval table — **P5 will produce these**.
+- Approach 2 (DCT) forensic checkpoint + `dct_stats.json` + eval table — **shipped May 2026** in phases/forensic/outputs/.
+- Approach 1 (RGB + Fourier) — deferred (see `phases/forensic/FOLLOWUP.md` section B).
+- SD v1.4 / SD v1.5 — deferred (bitmind HF 404; see FOLLOWUP.md section A).
 - All other doctor requirements are implemented in V3 (preserved in `phases/v3/`) or V4 (active at `phases/v4/`).
 
 ---
@@ -136,6 +138,6 @@ Synthesized from `docs/doctor-briefs/*.pdf` during the unified mega-repo restruc
 
 **Implemented (V3.1 5-class detector):** 100% of V1, V2, V3.1, V3 image-only, and flexibility requirements.
 
-**Pending (Forensic Image Detector):** 26 requirements (F.1-F.26) all blocked on P5 implementation sprint (3-4 days of work).
+**Implemented (Forensic Image Detector, Approach 2):** F.12-F.22 + F.23-F.26 — 15 of 26 requirements. F.1 (data structure), F.2 (6 of 8 generators), F.3 (substituted real class). Headline: Overall test AP 0.9863 across 6 generators. Doctor handoff at `phases/forensic/REPORT.md` + `.docx`.
 
-**No gaps in the doctor's spec coverage as of P3 completion.**
+**Deferred (Forensic):** F.4-F.11 (Approach 1, ~6 h) + 2 of 8 generators in F.2 (SD v1.4/v1.5, ~30 min once mirror found). See `phases/forensic/FOLLOWUP.md`.

@@ -1,7 +1,13 @@
 # Phase Forensic — Binary AI-Generated vs Real Image Detector
 
-**Status:** **Active sprint.** Skeleton scaffolded (P2.6). Implementation pending P5.
+**Status:** **Approach 2 (DCT) SHIPPED** (May 2026). Approach 1 (RGB + Fourier) deferred.
 
+**Headline result (Approach 2, 6 of 8 generators):**
+- Overall test AP: **0.9863**  (GAN 0.9998 / Diffusion 0.9836, StdDev 0.0158 across gens)
+- Best val AP: **0.9848** at epoch 13 (early-stopped epoch 18)
+- All 12 unit tests pass; 4 Phase-1/2 transition invariants verified.
+
+**Doctor handoff:** [`REPORT.md`](REPORT.md) (also `REPORT.docx`).
 **Source brief:** `docs/doctor-briefs/Forensic_Image_Detector_En.pdf`
 
 ---
@@ -53,11 +59,30 @@ Per-generator evaluation table for both approaches (rows = 8 generators × colum
 | **Diffusion Avg** | | | | |
 | **Std Dev** | | | | |
 
-**Final artifact:** `outputs/eval_table.md` populated for both approaches.
+**Final artifact:** `outputs/eval_table.md` populated for **Approach 2** (Approach 1 deferred).
+
+## Actually-shipped state (May 2026)
+
+| Generator | Type | AP | Accuracy | AUC | Source |
+|-----------|------|-----|----------|-----|--------|
+| midjourney | Diffusion | 0.9569 | 0.8590 | 0.9606 | local 10K 256px |
+| sdv1_4 | Diffusion | _skipped_ | _skipped_ | _skipped_ | bitmind 404 |
+| sdv1_5 | Diffusion | _skipped_ | _skipped_ | _skipped_ | bitmind 404 |
+| wukong | Diffusion | 0.9842 | 0.9310 | 0.9844 | bitmind parquet |
+| vqdm | Diffusion | 0.9846 | 0.9420 | 0.9870 | bitmind parquet |
+| adm | Diffusion | 0.9967 | 0.9740 | 0.9967 | bitmind parquet |
+| glide | Diffusion | 0.9958 | 0.9740 | 0.9966 | bitmind parquet |
+| biggan | GAN | 0.9998 | 0.9830 | 0.9998 | bitmind parquet |
+| **Overall Avg** | (6 evaluated) | **0.9863** | 0.9438 | 0.9875 | - |
+| **GAN Avg** | GAN | 0.9998 | 0.9830 | 0.9998 | - |
+| **Diffusion Avg** | Diffusion | 0.9836 | 0.9360 | 0.9851 | - |
+| **Std Dev (AP)** | (across gens) | 0.0158 | - | - | - |
+
+Caveat: real-class is VisualNews (not ImageNet "nature") — see `docs/DECISIONS.md` F-A3.
 
 ---
 
-## Files (after P5 implementation)
+## Files (current state)
 
 ```
 phases/forensic/
@@ -116,6 +141,8 @@ phases/forensic/
 ## How this hooks back into V4
 
 The trained `forensic_dct_model.pth` can later REPLACE `blur_jpg_v0.pth` as the initialization weights for V4's UnivFD Stage 1 encoder (`phases/v4/src/v4/models/encoders/univfd.py`). Better init -> better Stage 1 forensic features -> potentially better V4 Stage 2 fusion. This is a separate V4 plan revision; out of scope for this sprint.
+
+See [`FOLLOWUP.md`](FOLLOWUP.md) for the unfinished tracks (Approach 1, SD v1.4/v1.5, V4 retrain).
 
 ---
 
