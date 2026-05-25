@@ -207,29 +207,58 @@ python phases/forensic/scripts/eval_dct.py \
 
 ## Step 6 — Approach 1 (RGB + Fourier mask)
 
-See `phases/forensic/FOLLOWUP.md` section B for the full recipe.
-On multiGuard PC (Windows with Git Bash) the relevant steps are:
+**Status: SHIPPED.** Trained on FSOS, best val_AP 0.9971, Overall test AP 0.9979.
+Checkpoint mirrored at https://huggingface.co/FerasMad/forensic-rgb-v1.
+
+To reproduce on multiGuard:
 
 ```bash
-# 1. Clone the external repo
+# 1. Pull the trained checkpoint from HF Hub (fastest path)
+hf download FerasMad/forensic-rgb-v1 forensic_rgb_model.pth \
+    --local-dir phases/forensic/outputs/rgb/
+
+# 2. (Optional) Re-train from scratch — needs the data (steps 4a-4d above)
+#    plus the FakeImageDetection clone + the spectralmask checkpoint:
 git clone https://github.com/chandlerbing65nm/FakeImageDetection \
     phases/forensic/external/FakeImageDetection
+python -c "
+import gdown
+gdown.download_folder(
+    'https://drive.google.com/drive/folders/1ePTY4x2qvD7AVlNJXFLozFbUF6Y0_hET',
+    output='phases/forensic/external/FakeImageDetection/checkpoints',
+)
+"
+# F-A8: upstream renamed fouriermask -> spectralmask; the trainer auto-fallback handles this.
+python phases/forensic/scripts/train_rgb_fourier.py --out-dir phases/forensic/outputs/rgb
+# ~21 min on a 4070; should reproduce val_AP ~0.9971.
 
-# 2. Manually download `mask_15/rn50ft_fouriermask.pth` from the Google
-#    Drive link in their README, save to:
-#    phases/forensic/external/FakeImageDetection/checkpoints/mask_15/
-
-# 3. Patch the repo (idempotent):
-python phases/forensic/scripts/adapt_fakeimagedetection.py
-# (script doesn't exist yet — see FOLLOWUP.md B step 3)
-
-# 4. Train:
-bash phases/forensic/scripts/train_rgb_fourier.sh
-
-# 5. Eval:
+# 3. Eval per generator (regardless of train vs. download path):
 python phases/forensic/scripts/eval_rgb.py \
-    --ckpt phases/forensic/outputs/rgb/best_rgb.pth
+    --ckpt phases/forensic/outputs/rgb/forensic_rgb_model.pth
+
+# 4. Build the combined F.25 table (both approaches side-by-side):
+python phases/forensic/scripts/build_combined_eval_table.py
+# Writes phases/forensic/outputs/eval_table_combined.md
+
+# 5. (Optional) Regenerate the unified REPORT.md / REPORT.docx:
+python phases/forensic/scripts/build_handoff_report.py
 ```
+
+## Step 6.5 — Inference demo (single image)
+
+```bash
+# Approach 2 (DCT) — default
+python phases/forensic/scripts/infer.py path/to/image.jpg
+
+# Approach 1 (RGB+Fourier)
+python phases/forensic/scripts/infer.py --approach rgb path/to/image.jpg
+
+# Multiple images at once
+python phases/forensic/scripts/infer.py img1.jpg img2.png img3.jpeg
+```
+
+Output: `image_path | p(fake) | decision (REAL/FAKE)` per line. Useful for
+ad-hoc doctor demos.
 
 ---
 

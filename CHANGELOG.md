@@ -4,6 +4,74 @@ All notable changes to MultiGuard are recorded here. The format follows [Keep a 
 
 ---
 
+## [2026-05-25 P5] - Forensic detector (both approaches) + V4 integration
+
+### Added — Forensic phase
+
+- **Approach 2 (DCT)** detector trained end-to-end per F.12-F.22:
+  torchvision ResNet50 + 1-ch Kaiming conv1 + Linear(2048,1) head, two-phase
+  trainer (freeze layer1/2 in Phase 1, reinit optimizer+scheduler at epoch 6),
+  BCEWithLogitsLoss, ReduceLROnPlateau on val AP. Best val_AP **0.9848** @ ep13,
+  Overall test AP **0.9863** across 6/8 generators.
+- **Approach 1 (RGB + Fourier mask)** detector adapted from
+  `chandlerbing65nm/FakeImageDetection` per F.4-F.11: single-GPU clean wrapper
+  using their resnet50 + `change_output(1)` + FrequencyMaskGenerator, loading
+  `mask_15/rn50ft_spectralmask.pth` (upstream rename per F-A8). Best val_AP
+  **0.9971** @ ep10, Overall test AP **0.9979** across 6/8 generators.
+  StdDev across gens **0.0023** vs Approach 2's 0.0158 — 7x more consistent.
+- **Data pipeline:** `prepare_genimage_v2.py` (HF bitmind parquet extraction
+  for 5 gens + local midjourney + VisualNews-as-nature substitute),
+  `build_splits.py`, `precompute_dct.py` (multiprocess spawn for scipy.fft
+  isolation), `compute_dct_stats.py` (Welford streaming).
+- **Eval:** `eval_dct.py`, `eval_rgb.py`, `build_combined_eval_table.py` (F.25
+  side-by-side format), `plot_training.py` (training curves PNG), `infer.py`
+  (single-image demo).
+- **Doctor handoff:** unified `phases/forensic/REPORT.md` + `REPORT.docx`
+  covering both approaches with embedded training-curve plots.
+- **HuggingFace Hub mirrors:**
+  https://huggingface.co/FerasMad/forensic-dct-v1,
+  https://huggingface.co/FerasMad/forensic-rgb-v1,
+  https://huggingface.co/datasets/FerasMad/genimage-midjourney-10k.
+
+### Added — V4 integration
+
+- `phases/v4/src/v4/models/encoders/dct_forensic.py` — `DctForensicEncoder`
+  registered as `"dct_forensic_v1"` (drop-in Stage-1 init replacement for
+  V4's `UnivFDEncoder` blur_jpg_v0 path).
+- 9 unit tests (`test_dct_forensic_encoder.py`) + 4 integration tests
+  (`test_dct_forensic_in_v4_pipeline.py`) covering forward shape, freeze
+  flag, missing-ckpt fallback, real-ckpt load, fusion-pipeline plumbing,
+  and the V3.1 sec 5.5 aux-head `detach()` invariant.
+
+### Fixed — CI / lint
+
+- CI workflow paths updated for the post-unification layout
+  (`phases/v4/src/`, `phases/forensic/src/` etc.). Ruff ignore list expanded
+  to whitelist intentional patterns (lazy imports in workers per Risk R2,
+  NaN self-comparison, etc.). 30 tests now pass on every push.
+
+### Documented deviations (F-series in `docs/DECISIONS.md`)
+
+- F-A1: Approach 1 ships using FakeImageDetection's `resnet50` (not their
+  full DDP train.py).
+- F-A2: SD v1.4 / SD v1.5 generators unavailable on bitmind HF
+  (search exhausted); only the official GenImage Drive remains as a path.
+- F-A3: VisualNews used as the "real" class substitute for ImageNet "nature".
+- F-A4: 256x256 source JPGs, 224x224 model input.
+- F-A7: Approach 1 uses `change_output(1)` per F.7 instead of manual nn.Linear.
+- F-A8: upstream renamed `rn50ft_fouriermask.pth` -> `rn50ft_spectralmask.pth`;
+  we accept the rename as the spec-intended successor.
+
+### Deferred
+
+- 2 of 8 generators (SD v1.4 / SD v1.5) — needs browser-side GenImage Drive
+  download. See `phases/forensic/FOLLOWUP.md` A.
+- V4 retrain (Stage 0 FND-CLIP + Stage 2 fusion x 3 seeds) — blocked on
+  155 GB dataset transfer to multiGuard dual-4090 PC. See
+  `docs/MULTIGUARD_SETUP.md` step 7 and `phases/forensic/FOLLOWUP.md` D.
+
+---
+
 ## [Unreleased] - V4 Day 0-7 build
 
 ### Added
