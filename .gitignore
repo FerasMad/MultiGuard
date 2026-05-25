@@ -104,6 +104,15 @@ phases/forensic/external/FakeImageDetection/
 phases/forensic/outputs/
 
 # Repo-wide outputs/cache/data top-level dirs (V4 + cross-phase)
+cache/v2/
 cache/v4/
 outputs/v4/
 outputs/forensic/
+
+# P2.7 cleanup: stray outputs migrated to proper phase locations (all heavy artifacts)
+outputs/v1/leakfree/
+outputs/v1/leakfree_v2/
+outputs/v3/univfd_genimage/
+outputs/v2/full_run_*/
+outputs/v2/pipeline_run_*/
+outputs/v2/logs/
