@@ -101,7 +101,15 @@ phases/forensic/data/genimage_train/
 phases/forensic/data/genimage_test/
 phases/forensic/data/dct_cache/
 phases/forensic/external/FakeImageDetection/
-phases/forensic/outputs/
+
+# Inside phases/forensic/outputs/: ignore the heavy artifacts but ship the
+# small doctor-deliverable JSON / CSV / Markdown.
+phases/forensic/outputs/**/*.pt
+phases/forensic/outputs/**/*.pth
+phases/forensic/outputs/**/*.ckpt
+phases/forensic/outputs/**/*.safetensors
+phases/forensic/outputs/**/*.log
+phases/forensic/outputs/**/*.bin
 
 # Repo-wide outputs/cache/data top-level dirs (V4 + cross-phase)
 cache/v2/

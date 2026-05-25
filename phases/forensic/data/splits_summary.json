@@ -1,0 +1,104 @@
+{
+  "generators": [
+    "adm",
+    "biggan",
+    "glide",
+    "midjourney",
+    "vqdm",
+    "wukong"
+  ],
+  "per_generator": {
+    "adm": {
+      "ai_available": 1750,
+      "nature_available": 1750,
+      "train_fake": 1000,
+      "train_real": 1000,
+      "val_fake": 250,
+      "val_real": 250,
+      "test_fake": 500,
+      "test_real": 500
+    },
+    "biggan": {
+      "ai_available": 1750,
+      "nature_available": 1750,
+      "train_fake": 1000,
+      "train_real": 1000,
+      "val_fake": 250,
+      "val_real": 250,
+      "test_fake": 500,
+      "test_real": 500
+    },
+    "glide": {
+      "ai_available": 1750,
+      "nature_available": 1750,
+      "train_fake": 1000,
+      "train_real": 1000,
+      "val_fake": 250,
+      "val_real": 250,
+      "test_fake": 500,
+      "test_real": 500
+    },
+    "midjourney": {
+      "ai_available": 1750,
+      "nature_available": 1750,
+      "train_fake": 1000,
+      "train_real": 1000,
+      "val_fake": 250,
+      "val_real": 250,
+      "test_fake": 500,
+      "test_real": 500
+    },
+    "vqdm": {
+      "ai_available": 1750,
+      "nature_available": 1750,
+      "train_fake": 1000,
+      "train_real": 1000,
+      "val_fake": 250,
+      "val_real": 250,
+      "test_fake": 500,
+      "test_real": 500
+    },
+    "wukong": {
+      "ai_available": 1750,
+      "nature_available": 1750,
+      "train_fake": 1000,
+      "train_real": 1000,
+      "val_fake": 250,
+      "val_real": 250,
+      "test_fake": 500,
+      "test_real": 500
+    }
+  },
+  "totals": {
+    "train_real": 6000,
+    "train_fake": 6000,
+    "val_real": 1500,
+    "val_fake": 1500,
+    "test": {
+      "adm": {
+        "real": 500,
+        "fake": 500
+      },
+      "biggan": {
+        "real": 500,
+        "fake": 500
+      },
+      "glide": {
+        "real": 500,
+        "fake": 500
+      },
+      "midjourney": {
+        "real": 500,
+        "fake": 500
+      },
+      "vqdm": {
+        "real": 500,
+        "fake": 500
+      },
+      "wukong": {
+        "real": 500,
+        "fake": 500
+      }
+    }
+  }
+}

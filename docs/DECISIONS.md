@@ -271,6 +271,73 @@ These were locked during the mega-repo restructure (P0-P6 in the active plan).
 
 ---
 
+# Section 3 — Forensic Detector Decisions (F-series)
+
+These were locked during the Approach 2 (DCT) forensic detector build (P5 in the active plan).
+
+## F-A1 - Approach 2 only (defer Approach 1)
+
+**Date:** 2026-05-25
+**Decision:** Ship Approach 2 (DCT-based torchvision ResNet50) for this milestone. Approach 1 (RGB + Fourier mask via `chandlerbing65nm/FakeImageDetection`) deferred until Approach 2 is shipped and evaluated.
+
+**Why:** Approach 2 is fully spec'd locally with no external clone dependency, reuses V4-style tooling, and gives the doctor a working detector + per-generator eval table in one overnight cycle. Approach 1 needs Linux-only training shell + manual Drive download + path patches; it's lower-risk to add after Approach 2 is solid.
+
+## F-A2 - GenImage_v2 layout uses bitmind/* for 5 generators + local midjourney
+
+**Date:** 2026-05-25
+**Decision:** GenImage data acquisition path:
+- **midjourney** → 10K local 256×256 JPGs already on disk at `data/raw/GenImage/ai/midjourney/`
+- **wukong, vqdm, biggan, adm, glide** → `bitmind/GenImage_<Gen>` HF parquet datasets. Each parquet has ~400-20K rows of `{image: {bytes: <PNG-bytes>, path: <name>}}`. We download just enough parquets per generator to extract 1750 images, then delete the parquet.
+- **sdv1_4, sdv1_5** → MISSING. `bitmind/GenImage_StableDiffusionV1.4` and `bitmind/GenImage_StableDiffusionV1.5` return HF 404 (May 2026). Marked as SKIPPED in the eval table with reason `data_unavailable`.
+
+**Why:** The original GenImage Google Drive release is rate-limited and unscriptable on Windows. The `bitmind` HF mirror gives us 5 of the 7 missing generators in ~2 min of download. SD v1.4/v1.5 will need a different mirror — deferred.
+
+**Where:** `phases/forensic/scripts/prepare_genimage_v2.py`, `data/raw/GenImage_v2/_prep_summary.json`.
+
+## F-A3 - VisualNews used as "nature" (real-class) substitute
+
+**Date:** 2026-05-25
+**Decision:** Doctor's spec F.3 says the real class = ImageNet "nature" (bundled per-generator in the original GenImage release). ImageNet is not on disk on the FSOS PC. We substitute VisualNews JPGs (`data/raw/visualnews/origin/{bbc,guardian,usa_today,washington_post}/images/`) → 71,966 real news photos available, sampled 1750 per generator.
+
+**Why:** Real-vs-fake binary classification is well-defined regardless of the exact source distribution of the real class. VisualNews photos are genuine photographs (not generated). They differ from ImageNet "nature" semantically (news vs. natural scenes) which may introduce some domain bias, but the alternative was to skip the build entirely.
+
+**Trade-off:** A model trained on VisualNews-as-real may pick up on news-photo-versus-AI-image domain cues rather than pure forensic artifacts. This is acknowledged in the doctor handoff report. To validate, one could later re-train with the canonical GenImage release's `nature/` subset and compare AP per generator.
+
+**Where:** `phases/forensic/scripts/prepare_genimage_v2.py::sample_visualnews_nature`. Documented in eval table footer.
+
+## F-A4 - Image size: 256×256 source, 224×224 model input
+
+**Date:** 2026-05-25
+**Decision:** All raw images saved at 256×256 JPEG quality 92. The dual-DCT preprocessing (`compute_dual_dct`) resizes to 224×224 internally before patch extraction.
+
+**Why:** 256 → 224 gives a small crop margin and keeps disk usage modest (~150KB/image vs. ~3MB for the 1024×1024 native bitmind PNGs). The DCT recipe is invariant to this resize since we use `BILINEAR` interpolation both at extraction and inside the model.
+
+## F-A5 - Per-generator targets: 1250 train + 500 test (locked)
+
+**Date:** 2026-05-25
+**Decision:** Per generator we acquire 1750 ai + 1750 nature, then `build_splits.py` allocates:
+- 1000 train + 250 val per class (random shuffle, seed=42)
+- 500 test per class (held out, never touched until final eval)
+
+Train+val from all 6 generators are merged into a single pool (per F.1). Test stays per-generator.
+
+**Why:** Matches the spec's intent (per-generator AP/Acc/AUC at evaluation). Total dataset: 12K train + 3K val + 6K test = 21K images. Manageable on RTX 4070 in <4 h.
+
+## F-A6 - Approach 2 spec constants locked in `two_phase_trainer.py`
+
+**Date:** 2026-05-25
+**Decision:** Hyperparameters per doctor's spec F.19-F.21 are MODULE-LEVEL constants in `phases/forensic/src/forensic/training/two_phase_trainer.py`:
+```
+PHASE1_EPOCHS=5, PHASE1_LR=1e-4, PHASE2_LR=1e-5, WEIGHT_DECAY=1e-4,
+SCHEDULER_FACTOR=0.5, SCHEDULER_PATIENCE=3, EARLY_STOP_PATIENCE=5,
+PHASE2_GRAD_CLIP_MAX_NORM=1.0
+```
+YAML config (`phases/forensic/configs/dct_resnet50.yaml`) controls only `max_epochs`, `batch_size`, `num_workers`, `precision`.
+
+**Why:** Spec values must not silently drift via YAML overrides. The unit test `tests/test_two_phase_trainer.py` enforces 4 transition invariants against these constants. Changing them requires editing the trainer file (auditable in git).
+
+---
+
 ## How to add a new decision
 
 When you make a significant choice during V4 development:
