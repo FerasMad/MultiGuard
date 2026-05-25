@@ -88,7 +88,22 @@ outputs/v1_results/v1_5class_test_metrics.yaml
 config/settings.yaml
 
 # Pre-unification additions (heavy generated artifacts)
-v3/cache/
-v3/outputs/
-.venv-qwen-py312/
 articles.tar.gz
+
+# Post-unification: relocated V3 artifacts (per phase migration)
+cache/v3/
+outputs/v3/_checkpoints/
+phases/v3/.venv-qwen/
+
+# Forensic subproject (populated during P5)
+phases/forensic/data/raw/
+phases/forensic/data/genimage_train/
+phases/forensic/data/genimage_test/
+phases/forensic/data/dct_cache/
+phases/forensic/external/FakeImageDetection/
+phases/forensic/outputs/
+
+# Repo-wide outputs/cache/data top-level dirs (V4 + cross-phase)
+cache/v4/
+outputs/v4/
+outputs/forensic/
