@@ -139,21 +139,33 @@ python phases/forensic/scripts/prepare_genimage_v2.py --target-per-gen 1750
 This works if **VisualNews is on disk** at `data/raw/visualnews/origin/`.
 If it's not, see step 4c.
 
-### 4b. The wildcard: midjourney 10K (1.4 GB)
+### 4b. The midjourney 10K (151 MB)
 
 The midjourney row of the eval table comes from a local 10K JPG cache
-at `data/raw/GenImage/ai/midjourney/` (256x256). Two paths:
+at `data/raw/GenImage/ai/midjourney/` (256x256, ~151 MB).
 
 - **If multiGuard PC already has it** (from V3 work) — done, the prep
   script will pick it up automatically.
-- **If not** — either TeamViewer-transfer it from FSOS PC (~5 min via
-  zip-first), or skip midjourney entirely:
+- **If not** — pull from HF Hub (uploaded for exactly this purpose):
+  ```bash
+  # Download single tarball (~151 MB, one HTTP request)
+  hf download FerasMad/genimage-midjourney-10k midjourney_10k.tar \
+      --repo-type dataset --local-dir /tmp/
+
+  # Extract to the right place (creates data/raw/GenImage/ai/midjourney/)
+  mkdir -p data/raw/GenImage/ai/
+  tar -xf /tmp/midjourney_10k.tar -C data/raw/GenImage/ai/
+  ```
+  ~30 seconds total, fully unattended. Tarball is used instead of a
+  folder upload because HF Hub throws 500s on commits with 10K small
+  files; one tar sidesteps the issue.
+- **Or skip midjourney entirely** (5/8 generator ship):
   ```bash
   python phases/forensic/scripts/prepare_genimage_v2.py \
       --target-per-gen 1750 \
       --only-gens wukong vqdm biggan adm glide
   ```
-  Eval table will show midjourney as `_skipped_` in that case (5/8 gens).
+  Eval table will show midjourney as `_skipped_` in that case.
 
 ### 4c. VisualNews not on disk
 
@@ -287,3 +299,42 @@ hf download FerasMad/forensic-dct-v1 forensic_dct_model.pth \
 # Doctor sees: phases/forensic/REPORT.md / REPORT.docx + trained .pth
 # Five commands, ~7 minutes total.
 ```
+
+## TL;DR — full forensic reproducibility (no TeamViewer, no USB)
+
+```bash
+# On multiGuard PC, after the doctor-demo TL;DR:
+hf download FerasMad/genimage-midjourney-10k midjourney_10k.tar \
+    --repo-type dataset --local-dir /tmp/
+tar -xf /tmp/midjourney_10k.tar -C data/raw/GenImage/ai/
+# (the 10K MidJourney AI JPGs land at data/raw/GenImage/ai/midjourney/)
+
+# Re-build forensic data from scratch (bitmind HF + VisualNews-as-nature)
+# This step needs VisualNews on disk; see step 4c for that
+python phases/forensic/scripts/prepare_genimage_v2.py --target-per-gen 1750
+python phases/forensic/scripts/build_splits.py --train-per-gen 1250 --test-per-gen 500
+python phases/forensic/scripts/precompute_dct.py --workers 4
+python phases/forensic/scripts/compute_dct_stats.py
+
+# Verify the checkpoint matches FSOS-side training
+python -c "import torch; c=torch.load('phases/forensic/outputs/dct/forensic_dct_model.pth', weights_only=False); print('val_ap:', c['val_ap'])"
+
+# Re-eval (should reproduce overall AP 0.9863 across 6 generators)
+python phases/forensic/scripts/eval_dct.py \
+    --ckpt phases/forensic/outputs/dct/forensic_dct_model.pth
+```
+
+Forensic reproducibility = ~10 min total wall-clock on dual 4090.
+
+## The bulk transfer that still needs a real channel
+
+V4 retrain still needs **~155 GB of datasets** (VisualNews 99 GB + DGM4 21 GB
++ NewsCLIPpings 21 GB + MMFakeBench 14 GB) that aren't reasonable to host
+on a public HF Hub (licensing + size). Options:
+
+- **1 TB USB SSD** (~$90, ~5–30 min transfer time) — recommended.
+- HF Hub Pro account with private datasets ($9/mo) — slow uploads.
+- TeamViewer File Transfer — ~9–18 h, unreliable at this scale.
+
+This is V4-retrain-only; the doctor handoff and forensic reproducibility
+do NOT need this transfer.
