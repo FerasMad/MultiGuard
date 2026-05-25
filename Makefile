@@ -5,9 +5,10 @@ PYTEST := $(PY) -m pytest
 DATA_ROOT := data/raw
 CACHE_ROOT := cache/v4
 OUTPUTS := outputs/v4
-CONFIG_QWEN := configs/v4_pipeline_qwen.yaml
-CONFIG_STAGE0 := configs/v4_pipeline_stage0.yaml
-CONFIG_STAGE1 := configs/v4_pipeline_stage1.yaml
+# Post-unification (P2.5): configs live under phases/v4/configs/
+CONFIG_QWEN := phases/v4/configs/v4_pipeline_qwen.yaml
+CONFIG_STAGE0 := phases/v4/configs/v4_pipeline_stage0.yaml
+CONFIG_STAGE1 := phases/v4/configs/v4_pipeline_stage1.yaml
 
 .PHONY: help
 help:
@@ -74,12 +75,12 @@ test:
 	$(PYTEST) -v
 
 lint:
-	ruff check src/ tests/ app/ scripts/
-	ruff format --check src/ tests/ app/ scripts/
+	ruff check phases/v4/src phases/forensic/src phases/v4/tests phases/forensic/tests tests app scripts shared
+	ruff format --check phases/v4/src phases/forensic/src phases/v4/tests phases/forensic/tests tests app scripts shared
 
 fmt:
-	ruff check --fix src/ tests/ app/ scripts/
-	ruff format src/ tests/ app/ scripts/
+	ruff check --fix phases/v4/src phases/forensic/src phases/v4/tests phases/forensic/tests tests app scripts shared
+	ruff format phases/v4/src phases/forensic/src phases/v4/tests phases/forensic/tests tests app scripts shared
 
 .PHONY: clean
 clean:

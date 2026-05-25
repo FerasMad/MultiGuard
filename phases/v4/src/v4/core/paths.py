@@ -3,6 +3,18 @@
 All paths are computed relative to PROJECT_ROOT (the directory containing
 `pyproject.toml`). This avoids hardcoded absolute paths and makes the code
 portable across PCs.
+
+Post-unification layout (P2.5):
+    MultiGuard/                          <- PROJECT_ROOT (has pyproject.toml)
+    ├── data/raw/                        <- DATA_ROOT
+    ├── data/processed/                  <- DATA_PROCESSED
+    ├── cache/v4/                        <- CACHE_ROOT
+    ├── outputs/v4/                      <- OUTPUTS_ROOT
+    ├── app/                             <- APP_ROOT
+    ├── docs/                            <- DOCS_ROOT
+    └── phases/v4/
+        ├── src/v4/                      <- V4 package source
+        └── configs/                     <- CONFIGS_ROOT (V4-specific configs)
 """
 from __future__ import annotations
 
@@ -27,9 +39,12 @@ DATA_ROOT = PROJECT_ROOT / "data" / "raw"
 DATA_PROCESSED = PROJECT_ROOT / "data" / "processed"
 CACHE_ROOT = PROJECT_ROOT / "cache" / "v4"
 OUTPUTS_ROOT = PROJECT_ROOT / "outputs" / "v4"
-CONFIGS_ROOT = PROJECT_ROOT / "configs"
+# V4 configs live under the phase subfolder after unification (P2.5)
+CONFIGS_ROOT = PROJECT_ROOT / "phases" / "v4" / "configs"
 APP_ROOT = PROJECT_ROOT / "app"
 DOCS_ROOT = PROJECT_ROOT / "docs"
+# V4 phase root (for any V4-specific assets that live alongside src/)
+V4_PHASE_ROOT = PROJECT_ROOT / "phases" / "v4"
 
 
 def ensure_dir(p: Path | str) -> Path:

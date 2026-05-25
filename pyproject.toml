@@ -60,15 +60,38 @@ v4-server = "v4.cli:server_main"
 Repository = "https://github.com/FerasMad/MultiGuard"
 
 [tool.setuptools.packages.find]
-where = ["src"]
-include = ["v4*"]
+# After unification (P2.5): V4 source lives in phases/v4/src, forensic in phases/forensic/src
+where = ["phases/v4/src", "phases/forensic/src"]
+include = ["v4*", "forensic*"]
 exclude = ["tests*"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "tests", "app", "scripts"]
-extend-exclude = ["data", "outputs", "cache", "build", "dist"]
+src = [
+    "phases/v4/src",
+    "phases/forensic/src",
+    "phases/v4/tests",
+    "phases/forensic/tests",
+    "tests",
+    "app",
+    "scripts",
+    "shared",
+]
+extend-exclude = [
+    "data",
+    "outputs",
+    "cache",
+    "build",
+    "dist",
+    "phases/v1",
+    "phases/v2",
+    "phases/v3",
+    "shared/legacy_utils",
+    "phases/v3/.venv-qwen",
+    ".venv",
+    ".venv-qwen-py312",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "PL", "RUF"]
@@ -84,7 +107,8 @@ indent-style = "space"
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests"]
+# Post-unification: tests live per-phase under phases/<phase>/tests/, plus cross-phase tests at root
+testpaths = ["phases/v4/tests", "phases/forensic/tests", "tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -100,7 +124,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["src/v4"]
+source = ["phases/v4/src/v4", "phases/forensic/src/forensic"]
 omit = ["*/tests/*", "*/cli.py"]
 
 [tool.coverage.report]
