@@ -108,7 +108,19 @@ class ThreeWayFusion(nn.Module):
 
 @register(FUSION_REGISTRY, "v3_pairwise")
 class V3PairwiseFusion(FusionBase):
-    """Complete V3 fusion + classifier head per V3.1 sections 5-6 with section 5.5 aux head."""
+    """Complete V3 fusion + classifier head per V3.1 sections 5-6 with section 5.5 aux head.
+
+    Optional pre-fusion projections (`proj_dims`) let the module accept raw cached
+    features whose dim differs from `feat_dim`. Useful when reusing V3-era caches:
+
+        proj_dims:
+          v_semantic: 512    # V3 FND-CLIP raw, before sem_proj
+          v_textfor: 3584    # V3 Qwen2-7B raw, before text_proj
+
+    When `proj_dims` is None (default), projections are nn.Identity and the
+    module behaves exactly as before (V3.1 spec-strict: encoders are expected to
+    emit feat_dim features directly).
+    """
 
     expected_inputs = ("v_semantic", "v_imgfor", "v_textfor")
 
@@ -119,12 +131,18 @@ class V3PairwiseFusion(FusionBase):
         num_classes: int = 5,
         num_heads: int = 8,
         attn_dropout: float = 0.1,
+        proj_dims: dict | None = None,
         **_kwargs,
     ):
         super().__init__()
         self.feat_dim = feat_dim
         self.fused_dim = fused_dim
         self.num_classes = num_classes
+
+        proj_dims = proj_dims or {}
+        self.sem_proj = self._build_proj(proj_dims.get("v_semantic"), feat_dim)
+        self.img_proj = self._build_proj(proj_dims.get("v_imgfor"), feat_dim)
+        self.text_proj = self._build_proj(proj_dims.get("v_textfor"), feat_dim)
 
         self.fusion = ThreeWayFusion(
             feat_dim=feat_dim,
@@ -137,10 +155,17 @@ class V3PairwiseFusion(FusionBase):
         # V3.1 section 5.5 auxiliary binary head on v_imgfor.detach()
         self.aux_classifier = nn.Linear(feat_dim, 2)
 
+    @staticmethod
+    def _build_proj(in_dim: int | None, out_dim: int) -> nn.Module:
+        """Linear(in,out)+GELU if in_dim is set and != out_dim; else nn.Identity()."""
+        if in_dim is None or int(in_dim) == int(out_dim):
+            return nn.Identity()
+        return nn.Sequential(nn.Linear(int(in_dim), int(out_dim)), nn.GELU())
+
     def forward(self, features: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        v_semantic = features["v_semantic"]
-        v_imgfor = features["v_imgfor"]
-        v_textfor = features["v_textfor"]
+        v_semantic = self.sem_proj(features["v_semantic"])
+        v_imgfor = self.img_proj(features["v_imgfor"])
+        v_textfor = self.text_proj(features["v_textfor"])
 
         fused = self.fusion(v_semantic, v_imgfor, v_textfor)
         main_logits = self.classifier(fused)
