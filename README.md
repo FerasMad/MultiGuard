@@ -6,6 +6,24 @@ Owner: Feras Madkhali · KSU graduation project · Doctor-supervised.
 
 ---
 
+## Current ship (May 2026)
+
+**Forensic Image Detector — BOTH approaches shipped.** Per-generator eval on 6 of 8 generators in the doctor's brief (sdv1_4 / sdv1_5 unavailable on HF — see `phases/forensic/FOLLOWUP.md` A).
+
+| Approach | Best val AP | Overall test AP | StdDev across gens | Checkpoint |
+|----------|-------------|-----------------|--------------------|------------|
+| 1 (RGB + Fourier mask) | **0.9971** @ ep 10 | **0.9979** | **0.0023** | [FerasMad/forensic-rgb-v1](https://huggingface.co/FerasMad/forensic-rgb-v1) |
+| 2 (DCT) | 0.9848 @ ep 13 | 0.9863 | 0.0158 | [FerasMad/forensic-dct-v1](https://huggingface.co/FerasMad/forensic-dct-v1) |
+
+- **Doctor handoff:** [`phases/forensic/REPORT.md`](phases/forensic/REPORT.md) + `REPORT.docx` (embedded training curves)
+- **Per-generator tables:** [`phases/forensic/outputs/eval_table_combined.md`](phases/forensic/outputs/eval_table_combined.md) (F.25 format, side-by-side)
+- **Inference demo:** `python phases/forensic/scripts/infer.py path/to/image.jpg`
+- **Setup on multiGuard PC:** [`docs/MULTIGUARD_SETUP.md`](docs/MULTIGUARD_SETUP.md) (5-command minimum, no TeamViewer needed)
+- **Live status / open follow-ups:** [`STATUS.md`](STATUS.md)
+- **All 44 tests pass.**
+
+---
+
 ## Repo layout
 
 ```
