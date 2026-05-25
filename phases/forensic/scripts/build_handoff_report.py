@@ -279,6 +279,7 @@ def main():
     print(f"Wrote {args.out_md}")
 
     if not args.no_docx:
+        # Try pandoc CLI on PATH first; fall back to bundled pypandoc-binary.
         pandoc = shutil.which("pandoc")
         if pandoc:
             try:
@@ -286,11 +287,23 @@ def main():
                     [pandoc, str(args.out_md), "-o", str(args.out_docx)],
                     check=True,
                 )
-                print(f"Wrote {args.out_docx} (via pandoc)")
+                print(f"Wrote {args.out_docx} (via pandoc CLI)")
+                return
             except subprocess.CalledProcessError as e:
-                print(f"pandoc failed: {e}; .md is good standalone.", file=sys.stderr)
-        else:
-            print("pandoc not found; .md is final (skip .docx).", file=sys.stderr)
+                print(f"pandoc CLI failed: {e}; trying pypandoc...", file=sys.stderr)
+        try:
+            import pypandoc
+
+            pypandoc.convert_file(str(args.out_md), "docx", outputfile=str(args.out_docx))
+            print(f"Wrote {args.out_docx} (via pypandoc)")
+        except ImportError:
+            print(
+                "Neither pandoc CLI nor pypandoc available; .md is final (skip .docx). "
+                "To enable: pip install pypandoc-binary",
+                file=sys.stderr,
+            )
+        except Exception as e:
+            print(f"pypandoc failed: {type(e).__name__}: {e}; .md is final.", file=sys.stderr)
 
 
 if __name__ == "__main__":
