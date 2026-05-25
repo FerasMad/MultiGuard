@@ -8,25 +8,30 @@ detector toward the full 8-generator + 2-approach + V4-integrated end state.
 
 ## A. Close the 2 missing generators (SD v1.4 / SD v1.5)
 
-**Status:** `bitmind/GenImage_StableDiffusionV1.4` and `bitmind/GenImage_StableDiffusionV1.5`
-return HF 404. The eval table currently shows them as `_skipped_`.
+**Status:** Exhausted HF search (May 2026):
+- `bitmind/GenImage_StableDiffusionV1.4` and `bitmind/GenImage_StableDiffusionV1.5`: HF 404.
+- Bitmind hosts many other SDXL/FLUX/LDM datasets but no SD v1.4 or v1.5.
+- HF dataset search for "stable diffusion 1.4 detection" / "genimage sd1.4" / etc.
+  returns empty or unrelated repos (`RohanRamesh/genimage_sdv5`, `andrew-zhu/genimage-dataset`
+  are listed but contain `.gitattributes` only, no actual data).
+
+Eval table shows them as `_skipped_`. The only remaining path is the official
+GenImage Google Drive (requires browser-side click-through — not scriptable from CI).
 
 **Effort:** ~30 min download + 5 min re-eval (no retraining needed).
 
-**Options to try, in order:**
+**Path forward when you're at a browser:**
 
-1. Search HF for renamed mirrors:
+1. Visit https://github.com/GenImage-Dataset/GenImage README and click the Drive link.
+   Download just the SD v1.4 and SD v1.5 generator subfolders (~3 GB each).
+   Place AI images at `data/raw/GenImage_v2/sdv1_4/ai/` and `.../sdv1_5/ai/`.
+
+2. VisualNews nature is already on disk from the May 2026 run; reuse via:
    ```bash
-   huggingface-cli search dataset "stable diffusion 1.4 detection"
+   python phases/forensic/scripts/prepare_genimage_v2.py \
+       --only-gens sdv1_4 sdv1_5 --skip-bitmind
    ```
-   Common candidates: `Hemg/GenImage`, `JourneyDB/JourneyDB`, recent `aimagedet/*` repos.
-
-2. Use the official GenImage Google Drive (link in https://github.com/GenImage-Dataset/GenImage).
-   Download just the SD v1.4 and SD v1.5 generator subfolders (~3 GB each). Place
-   AI images at `data/raw/GenImage_v2/sdv1_4/ai/` and `data/raw/GenImage_v2/sdv1_5/ai/`.
-   VisualNews nature is already there from the May 2026 run; reuse via
-   `prepare_genimage_v2.py --only-gens sdv1_4 sdv1_5 --skip-bitmind`
-   (the script auto-detects existing files).
+   (auto-detects existing AI files and only re-samples nature).
 
 3. Run `build_splits.py` again — it will add `sdv1_4/` and `sdv1_5/` test folders
    alongside the existing 6 generators (`--symlink` to avoid duplicating disk).

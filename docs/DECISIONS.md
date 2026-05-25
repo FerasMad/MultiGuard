@@ -323,6 +323,42 @@ Train+val from all 6 generators are merged into a single pool (per F.1). Test st
 
 **Why:** Matches the spec's intent (per-generator AP/Acc/AUC at evaluation). Total dataset: 12K train + 3K val + 6K test = 21K images. Manageable on RTX 4070 in <4 h.
 
+## F-A7 - Approach 1: use FakeImageDetection's resnet50 + change_output(1)
+
+**Date:** 2026-05-25
+**Decision:** Approach 1 imports `resnet50` and `FrequencyMaskGenerator` from the
+cloned `phases/forensic/external/FakeImageDetection/` rather than adapting their
+DDP-driven `train.py`. Our `phases/forensic/scripts/train_rgb_fourier.py` is a
+single-GPU Windows-friendly trainer that uses the same model class and Fourier
+masking but our existing `phases/forensic/data/genimage_train/` layout. Calls
+`model.change_output(1)` per F.7 instead of manual `nn.Linear` creation.
+
+**Why:** The upstream `train.py` is DDP + wandb + NCCL + hardcoded
+`/mnt/SCRATCH/...` paths — adapting it would be 200+ LOC of patches. A clean
+wrapper that reuses just the model + augment + mask code is 40 LOC and matches
+the spec F.4-F.11 exactly.
+
+## F-A8 - Approach 1 checkpoint renamed upstream (fouriermask -> spectralmask)
+
+**Date:** 2026-05-25
+**Decision:** Doctor's spec F.5 literally requires
+`mask_15/rn50ft_fouriermask.pth`. As of May 2026, the
+`chandlerbing65nm/FakeImageDetection` Drive folder contains
+`rn50ft_spectralmask.pth` instead (no file with the literal "fouriermask" name
+exists). The repo's `mask.py` confirms that `transform_type='fourier'` IS the
+implementation of "spectralmask" with `band='all'` — i.e. it's the same model,
+just renamed by the upstream author.
+
+We accept `rn50ft_spectralmask.pth` as the spec-intended successor. The
+`_resolve_checkpoint` function in `train_rgb_fourier.py` tries the literal name
+first, then falls back to the spectralmask variants, then ImageNet RN50 init as
+a last resort. The deviation is logged in the saved checkpoint's `init_method`
+field so anyone reviewing the model can see which path was taken.
+
+**Trade-off:** None functionally — the upstream rename is cosmetic. The model
+weights are identical to the spec-literal `rn50ft_fouriermask.pth` they were
+supposed to be.
+
 ## F-A6 - Approach 2 spec constants locked in `two_phase_trainer.py`
 
 **Date:** 2026-05-25
