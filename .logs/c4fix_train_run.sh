@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-cd /c/Desktop/Multimodal-fake-news-detection
+cd /c/Desktop/MultiGuard
 PY="/c/Users/FSOS/AppData/Local/Programs/Python/Python313/python.exe"
 
 echo "=========== Step 1/2: train RoBERTa c4fix (~15 min) ============"

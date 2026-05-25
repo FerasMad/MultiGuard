@@ -1,0 +1,112 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multiguard-v4"
+version = "0.1.0"
+description = "Multimodal fake-news detector (V3.1-spec compliant rebuild)"
+readme = "README.md"
+requires-python = "==3.12.*"
+license = { text = "MIT" }
+authors = [
+    { name = "Feras Madkhali", email = "iiiferasiii@gmail.com" },
+]
+keywords = ["fake-news", "multimodal", "deepfake", "forensics", "fusion"]
+
+dependencies = [
+    "numpy>=1.26,<2.0",
+    "pandas>=2.2",
+    "pyyaml>=6.0",
+    "tqdm>=4.66",
+    "scikit-learn>=1.4",
+    "Pillow>=10.2",
+    "opencv-python>=4.9",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",
+    "transformers>=4.45,<5.0",
+    "huggingface_hub[cli]>=0.24",
+    "accelerate>=0.34",
+    "safetensors>=0.4",
+]
+server = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
+]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "pre-commit>=3.7",
+]
+all = [
+    "multiguard-v4[gpu,server,dev]",
+]
+
+[project.scripts]
+v4-train = "v4.cli:train_main"
+v4-eval = "v4.cli:eval_main"
+v4-build-manifest = "v4.cli:build_manifest_main"
+v4-precompute = "v4.cli:precompute_main"
+v4-server = "v4.cli:server_main"
+
+[project.urls]
+Repository = "https://github.com/FerasMad/MultiGuard"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["v4*"]
+exclude = ["tests*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "app", "scripts"]
+extend-exclude = ["data", "outputs", "cache", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "PL", "RUF"]
+ignore = ["E501", "PLR0913", "PLR2004", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004", "F401"]
+"__init__.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-ra", "--strict-markers", "--tb=short"]
+markers = [
+    "slow: marks tests as slow",
+    "gpu: marks tests requiring CUDA",
+    "spec_compliance: V3.1 spec-section assertions",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning:torch",
+]
+
+[tool.coverage.run]
+source = ["src/v4"]
+omit = ["*/tests/*", "*/cli.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
