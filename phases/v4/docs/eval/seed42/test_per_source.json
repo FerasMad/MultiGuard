@@ -1,0 +1,34 @@
+{
+  "DGM4_face_attribute": {
+    "n": 205,
+    "f1_macro": 0.30511463844797176
+  },
+  "DGM4_face_swap": {
+    "n": 283,
+    "f1_macro": 0.28857715430861725
+  },
+  "GenImage_MidJourney": {
+    "n": 495,
+    "f1_macro": 1.0
+  },
+  "MMFakeBench_textual_test": {
+    "n": 445,
+    "f1_macro": 1.0
+  },
+  "MMFakeBench_textual_val": {
+    "n": 50,
+    "f1_macro": 1.0
+  },
+  "MMFakeBench_visual_test": {
+    "n": 7,
+    "f1_macro": 0.14814814814814814
+  },
+  "NewsCLIPpings_OOC": {
+    "n": 495,
+    "f1_macro": 0.22072072072072071
+  },
+  "NewsCLIPpings_genuine": {
+    "n": 495,
+    "f1_macro": 0.17922205809945838
+  }
+}

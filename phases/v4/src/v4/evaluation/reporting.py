@@ -49,11 +49,17 @@ def compute_metrics(y_true, y_pred, *, num_classes: int = 5) -> dict:
 
 
 def write_classification_report(y_true, y_pred, out_path: Path) -> None:
-    """sklearn classification_report -> .txt"""
-    target_names = [LABELS[i] for i in range(len(LABELS))]
+    """sklearn classification_report -> .txt
+
+    Pass `labels=` explicitly so the report covers all V3.1 classes even when
+    a split (e.g. MMFakeBench transfer) doesn't exercise every label.
+    """
+    labels = list(range(len(LABELS)))
+    target_names = [LABELS[i] for i in labels]
     txt = classification_report(
         y_true,
         y_pred,
+        labels=labels,
         target_names=target_names,
         zero_division=0,
         digits=4,

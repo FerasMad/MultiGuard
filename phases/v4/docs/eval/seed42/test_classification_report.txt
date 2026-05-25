@@ -1,0 +1,11 @@
+                  precision    recall  f1-score   support
+
+            Real     0.4527    0.3677    0.4058       495
+  Out-of-Context     0.4471    0.4949    0.4698       495
+     Manipulated     0.7377    0.7899    0.7629       495
+         AI-Text     0.9940    1.0000    0.9970       495
+Fully-Fabricated     0.9960    1.0000    0.9980       495
+
+        accuracy                         0.7305      2475
+       macro avg     0.7255    0.7305    0.7267      2475
+    weighted avg     0.7255    0.7305    0.7267      2475

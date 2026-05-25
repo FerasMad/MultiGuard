@@ -50,8 +50,24 @@ considered for live deployment.
 - Code + tests + V4 docs all on disk; CI green.
 - `dct_forensic_v1` encoder wrapper added - `forensic_dct_model.pth` is now
   a drop-in Stage-1 init for V4 (replaces `blur_jpg_v0.pth`).
-- Stage 0 / Stage 2 retrain BLOCKED on getting the 155 GB datasets onto
-  the multiGuard dual-4090 PC (see `docs/MULTIGUARD_SETUP.md` step 7).
+- **V4 Stage 2 retrained on FSOS** using:
+  - new `v_imgfor_dctforensic` cache (16500 shards, built from `forensic_dct_model.pth`),
+  - V3 raw `v_semantic` (512) and `v_textfor_qwen` (3584) caches reused via inline
+    `proj_dims` projection heads in `V3PairwiseFusion` (P5.10a).
+
+  | Metric | V4 (this run) | V3 baseline |
+  |---|---|---|
+  | Val F1-macro | **0.7334** @ ep 4 | 0.7215 |
+  | Test F1-macro | **0.7267** | (V3 5-class test was never re-evaluated under §7) |
+  | MMFakeBench transfer F1-macro | **0.4805** | 0.3832 |
+
+  Trained from `phases/v4/configs/v4_pipeline_dctforensic_v3caches.yaml`,
+  output `outputs/v4/stage2_fusion_dctforensic/best.pt`.
+  Early-stopped at epoch 14 (patience=10 from ep 4). +1.19 pp val vs V3,
+  +0.4805 vs 0.3832 (+9.7 pp) on transfer. Class 4 caption shortcut
+  persists via reused V3 text cache (per-class F1: cls3=0.997, cls4=0.998).
+- 3-seed runs (1337, 2024) and Stage 0 fresh fine-tune still deferred —
+  single-4070 + cache regen cost; not needed for current ship.
 
 ---
 
@@ -85,7 +101,9 @@ considered for live deployment.
 | Combined eval table builder | OK Written | `build_combined_eval_table.py` |
 | Approach 1 REPORT update | OK Done | REPORT.md / REPORT.docx now cover both approaches |
 | Approach 1 .pth on HF Hub | OK Uploaded | https://huggingface.co/FerasMad/forensic-rgb-v1 |
-| V4 Stage 0 / Stage 2 retrain on FSOS | Deferred | Single-4070 too slow; dual-4090 needs 155 GB data transfer |
+| V4 cache regen (v_imgfor with dct_forensic_v1) | OK Done | 16500 shards @ ~155s on RTX 4070 (P5.10b) |
+| V4 Stage 2 retrain (seed=42) | OK Done | val_F1=0.7334 / test_F1=0.7267 / transfer_F1=0.4805 — P5.11a |
+| V4 Stage 0 fresh + seeds 1337/2024 | Deferred | Single-4070; not needed for current ship — see open follow-ups |
 
 ---
 
@@ -127,9 +145,12 @@ python phases/forensic/scripts/build_combined_eval_table.py
 
 1. SD v1.4 / SD v1.5 generators (`phases/forensic/FOLLOWUP.md` A) - needs official
    GenImage Drive (browser-side).
-2. V4 retrain on dual-4090 (`docs/MULTIGUARD_SETUP.md` step 7) - needs 1 TB USB
-   SSD for 155 GB dataset transfer.
+2. V4 multi-seed (1337, 2024) + fresh Stage 0 (FND-CLIP fine-tune) on dual-4090
+   - needs the 155 GB dataset transfer; current single-seed FSOS run is the ship.
 3. ImageNet "nature" validation (FOLLOWUP C) - only if domain bias is a concern.
+4. V4 Class 4 / 3 caption-shortcut: dropped by reusing V3 text cache as-is.
+   Re-cache `v_textfor` over `forensic_5class_unified.csv` after BLIP-2 caption
+   rewrite once we re-stage VisualNews on a real GPU (deferred to next sprint).
 
 ---
 

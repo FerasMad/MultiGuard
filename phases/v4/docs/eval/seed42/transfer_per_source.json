@@ -1,0 +1,14 @@
+{
+  "MMFakeBench_textual_test": {
+    "n": 445,
+    "f1_macro": 1.0
+  },
+  "MMFakeBench_textual_val": {
+    "n": 50,
+    "f1_macro": 1.0
+  },
+  "MMFakeBench_visual_test": {
+    "n": 7,
+    "f1_macro": 0.14814814814814814
+  }
+}
