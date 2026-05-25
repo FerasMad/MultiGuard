@@ -92,7 +92,7 @@ def import_all() -> None:
     # Datasets
     import v4.data.datasets.cached
     import v4.data.datasets.runtime
-    import v4.models.encoders.dct_forensic  # noqa: F401 (registers "dct_forensic_v1")
+    import v4.models.encoders.dct_forensic
     import v4.models.encoders.fnd_clip
     import v4.models.encoders.qwen_text
     import v4.models.encoders.univfd
