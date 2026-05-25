@@ -11,6 +11,7 @@ Doctor's spec F.23-F.24 (MASTER_CHECKLIST):
         - Diffusion avg (other 7: midjourney, sdv1_4, sdv1_5, wukong, vqdm, adm, glide)
         - Std Dev of AP across all 8 generators
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -18,16 +19,21 @@ from statistics import mean, stdev
 
 import numpy as np
 import torch
-import torch.nn as nn
 from sklearn.metrics import average_precision_score, roc_auc_score
+from torch import nn
 from torch.utils.data import DataLoader
 
 from forensic.data.dct_dataset import DctTestCacheDataset
 
-
 # Doctor's 8 generators + their type taxonomy
 GENERATORS_DIFFUSION: tuple[str, ...] = (
-    "midjourney", "sdv1_4", "sdv1_5", "wukong", "vqdm", "adm", "glide",
+    "midjourney",
+    "sdv1_4",
+    "sdv1_5",
+    "wukong",
+    "vqdm",
+    "adm",
+    "glide",
 )
 GENERATORS_GAN: tuple[str, ...] = ("biggan",)
 ALL_GENERATORS: tuple[str, ...] = GENERATORS_DIFFUSION + GENERATORS_GAN
@@ -55,8 +61,11 @@ def evaluate_one_generator(
         limit=limit,
     )
     loader = DataLoader(
-        ds, batch_size=batch_size, num_workers=num_workers,
-        shuffle=False, pin_memory=True,
+        ds,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=False,
+        pin_memory=True,
     )
 
     model.eval().to(device)
@@ -77,7 +86,7 @@ def evaluate_one_generator(
     if len(set(labels.tolist())) < 2:
         return {
             "generator": generator,
-            "n_samples": int(len(labels)),
+            "n_samples": len(labels),
             "n_real": int((labels == 0).sum()),
             "n_fake": int((labels == 1).sum()),
             "ap": float("nan"),
@@ -88,7 +97,7 @@ def evaluate_one_generator(
 
     return {
         "generator": generator,
-        "n_samples": int(len(labels)),
+        "n_samples": len(labels),
         "n_real": int((labels == 0).sum()),
         "n_fake": int((labels == 1).sum()),
         "ap": float(average_precision_score(labels, probs)),
@@ -137,7 +146,8 @@ def evaluate_per_generator(
 def aggregate_metrics(per_gen: dict[str, dict]) -> dict:
     """Compute Overall / GAN / Diffusion / StdDev aggregates per doctor's F.24."""
     metrics_present = [
-        per_gen[g] for g in per_gen
+        per_gen[g]
+        for g in per_gen
         if not per_gen[g].get("skipped") and not np.isnan(per_gen[g].get("ap", float("nan")))
     ]
 
@@ -146,12 +156,10 @@ def aggregate_metrics(per_gen: dict[str, dict]) -> dict:
         return float(mean(vals)) if vals else float("nan")
 
     diffusion_rows = [
-        per_gen[g] for g in GENERATORS_DIFFUSION
-        if g in per_gen and not per_gen[g].get("skipped")
+        per_gen[g] for g in GENERATORS_DIFFUSION if g in per_gen and not per_gen[g].get("skipped")
     ]
     gan_rows = [
-        per_gen[g] for g in GENERATORS_GAN
-        if g in per_gen and not per_gen[g].get("skipped")
+        per_gen[g] for g in GENERATORS_GAN if g in per_gen and not per_gen[g].get("skipped")
     ]
 
     aps = [r["ap"] for r in metrics_present]
@@ -182,7 +190,7 @@ __all__ = [
     "ALL_GENERATORS",
     "GENERATORS_DIFFUSION",
     "GENERATORS_GAN",
+    "aggregate_metrics",
     "evaluate_one_generator",
     "evaluate_per_generator",
-    "aggregate_metrics",
 ]

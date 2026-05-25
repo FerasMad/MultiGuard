@@ -9,6 +9,7 @@ Invariants asserted at start of epoch 6:
 Bonus assertion:
     B1. self.early_stop.patience_left preserved across transition (NOT reset to 5)
 """
+
 from __future__ import annotations
 
 import torch
@@ -124,7 +125,7 @@ def test_grad_clip_is_called_in_phase2(tmp_path, monkeypatch):
 
     # Spy on clip_grad_norm_
     calls = {"n": 0, "max_norm": None}
-    import torch.nn.utils as nnu  # noqa: PLC0415
+    import torch.nn.utils as nnu
 
     orig = nnu.clip_grad_norm_
 
@@ -149,7 +150,7 @@ def test_grad_clip_NOT_called_in_phase1(tmp_path, monkeypatch):
     assert t._apply_grad_clip is False
 
     calls = {"n": 0}
-    import torch.nn.utils as nnu  # noqa: PLC0415
+    import torch.nn.utils as nnu
 
     orig = nnu.clip_grad_norm_
 

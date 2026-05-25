@@ -1,4 +1,5 @@
 """prepare_image_subset - list/copy only the VisualNews images referenced by manifest."""
+
 from __future__ import annotations
 
 import shutil
@@ -10,8 +11,7 @@ import pandas as pd
 
 def list_needed(csv_path: Path) -> list[Path]:
     df = pd.read_csv(csv_path)
-    return sorted({Path(p) for p in df["image_path"]
-                   if "visualnews" in str(p).lower()})
+    return sorted({Path(p) for p in df["image_path"] if "visualnews" in str(p).lower()})
 
 
 def copy_subset(needed: list[Path], src_root: Path, dst_root: Path) -> int:

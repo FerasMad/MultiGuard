@@ -1,4 +1,5 @@
 """Registry pattern smoke tests."""
+
 from __future__ import annotations
 
 import pytest
@@ -6,8 +7,12 @@ import pytest
 
 def test_registry_populated():
     from v4.core.registry import (
-        DATASET_REGISTRY, ENCODER_REGISTRY, FUSION_REGISTRY, import_all,
+        DATASET_REGISTRY,
+        ENCODER_REGISTRY,
+        FUSION_REGISTRY,
+        import_all,
     )
+
     import_all()
     assert "univfd" in ENCODER_REGISTRY
     assert "fnd_clip" in ENCODER_REGISTRY
@@ -19,11 +24,13 @@ def test_registry_populated():
 
 def test_duplicate_register_rejected():
     from v4.core.registry import register
+
     reg: dict = {}
 
     @register(reg, "x")
     class _A: ...
 
     with pytest.raises(ValueError, match="duplicate"):
+
         @register(reg, "x")
         class _B: ...

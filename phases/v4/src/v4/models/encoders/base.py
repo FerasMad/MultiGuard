@@ -2,12 +2,13 @@
 
 See docs/ADD_ENCODER.md for a copy-paste template.
 """
+
 from __future__ import annotations
 
 from typing import ClassVar, Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class EncoderBase(nn.Module):
@@ -28,6 +29,7 @@ class EncoderBase(nn.Module):
     positional args. This way a single trainer can drive encoders with
     different input shapes (FND-CLIP wants 6 tensors, UnivFD wants 1).
     """
+
     name: ClassVar[str] = "_base"
     required_inputs: ClassVar[tuple[str, ...]] = ()
     modality: ClassVar[Literal["text", "image", "multi"]] = "multi"

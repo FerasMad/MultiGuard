@@ -7,6 +7,7 @@ Doctor's spec F.17:
     'Z-score: compute global DCT_mean + DCT_std from `genimage_train/train/` only,
      save to `dct_stats.json`, apply (t-mean)/(std+1e-8) at every stage.'
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,8 +19,9 @@ from pathlib import Path
 import torch
 
 
-def _welford_update(count: int, mean: float, m2: float, value_count: int,
-                    value_sum: float, value_sum_sq: float) -> tuple[int, float, float]:
+def _welford_update(
+    count: int, mean: float, m2: float, value_count: int, value_sum: float, value_sum_sq: float
+) -> tuple[int, float, float]:
     """Update Welford running aggregates with a batch of `value_count` scalars
     having sum `value_sum` and sum-of-squares `value_sum_sq`."""
     if value_count == 0:
@@ -35,11 +37,13 @@ def _welford_update(count: int, mean: float, m2: float, value_count: int,
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--cache", type=Path,
-                   default=Path("phases/forensic/data/dct_cache/train"),
-                   help="Directory containing train .pt shards")
-    p.add_argument("--out", type=Path,
-                   default=Path("phases/forensic/data/dct_stats.json"))
+    p.add_argument(
+        "--cache",
+        type=Path,
+        default=Path("phases/forensic/data/dct_cache/train"),
+        help="Directory containing train .pt shards",
+    )
+    p.add_argument("--out", type=Path, default=Path("phases/forensic/data/dct_stats.json"))
     args = p.parse_args()
 
     if not args.cache.exists():
@@ -71,20 +75,20 @@ def main():
         count, mean, m2 = _welford_update(count, mean, m2, value_count, value_sum, value_sum_sq)
 
         if (i + 1) % 500 == 0 or (i + 1) == len(pts):
-            print(f"  {i+1}/{len(pts)}  running mean={mean:.4f}  count={count}", flush=True)
+            print(f"  {i + 1}/{len(pts)}  running mean={mean:.4f}  count={count}", flush=True)
 
     if count < 2:
         print(f"FATAL: too few scalars accumulated ({count})", file=sys.stderr)
         sys.exit(2)
 
     variance = m2 / (count - 1)  # sample variance
-    std = variance ** 0.5
+    std = variance**0.5
 
     out_data = {
         "mean": float(mean),
         "std": float(std),
         "n_scalars": int(count),
-        "n_files": int(len(pts)),
+        "n_files": len(pts),
         "computed_at": time.time(),
         "source": str(args.cache),
     }

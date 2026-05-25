@@ -1,10 +1,12 @@
 """V3.1 section 7 evaluation reporting: P, R, F1-macro, confusion matrix."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +25,10 @@ def compute_metrics(y_true, y_pred, *, num_classes: int = 5) -> dict:
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     p, r, f1, support = precision_recall_fscore_support(
-        y_true, y_pred, labels=list(range(num_classes)), zero_division=0,
+        y_true,
+        y_pred,
+        labels=list(range(num_classes)),
+        zero_division=0,
     )
     f1_macro = float(f1_score(y_true, y_pred, average="macro", zero_division=0))
     cm = confusion_matrix(y_true, y_pred, labels=list(range(num_classes))).tolist()
@@ -47,7 +52,11 @@ def write_classification_report(y_true, y_pred, out_path: Path) -> None:
     """sklearn classification_report -> .txt"""
     target_names = [LABELS[i] for i in range(len(LABELS))]
     txt = classification_report(
-        y_true, y_pred, target_names=target_names, zero_division=0, digits=4,
+        y_true,
+        y_pred,
+        target_names=target_names,
+        zero_division=0,
+        digits=4,
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(txt, encoding="utf-8")

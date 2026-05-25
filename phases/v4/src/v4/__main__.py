@@ -1,4 +1,5 @@
 """Enable python -m v4 <subcommand>."""
+
 import sys
 
 from v4.cli import main

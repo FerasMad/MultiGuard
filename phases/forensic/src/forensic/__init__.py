@@ -8,6 +8,7 @@ Two approaches implemented under this package:
 
 Output artifacts: forensic_rgb_model.pth, forensic_dct_model.pth, dct_stats.json
 """
+
 from __future__ import annotations
 
 from pathlib import Path

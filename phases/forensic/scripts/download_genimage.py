@@ -17,6 +17,7 @@ Run:
     python phases/forensic/scripts/download_genimage.py --gens all --out data/raw/GenImage_v2
     python phases/forensic/scripts/download_genimage.py --gens midjourney --per-gen-ai 100  # smoke test
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,19 +30,18 @@ from pathlib import Path
 
 from huggingface_hub import snapshot_download
 
-
 HF_GENERATOR_SOURCES: dict[str, list[str]] = {
     "midjourney": ["bitmind/GenImage_MidJourney"],
-    "sdv1_4":     ["bitmind/GenImage_SDv1_4", "bitmind/GenImage_StableDiffusion_v1_4"],
-    "sdv1_5":     ["bitmind/GenImage_SDv1_5", "bitmind/GenImage_StableDiffusion_v1_5"],
-    "wukong":     ["bitmind/GenImage_Wukong"],
-    "vqdm":       ["bitmind/GenImage_VQDM"],
-    "biggan":     ["bitmind/GenImage_BigGAN"],
-    "adm":        ["bitmind/GenImage_ADM"],
-    "glide":      ["bitmind/GenImage_GLIDE"],
+    "sdv1_4": ["bitmind/GenImage_SDv1_4", "bitmind/GenImage_StableDiffusion_v1_4"],
+    "sdv1_5": ["bitmind/GenImage_SDv1_5", "bitmind/GenImage_StableDiffusion_v1_5"],
+    "wukong": ["bitmind/GenImage_Wukong"],
+    "vqdm": ["bitmind/GenImage_VQDM"],
+    "biggan": ["bitmind/GenImage_BigGAN"],
+    "adm": ["bitmind/GenImage_ADM"],
+    "glide": ["bitmind/GenImage_GLIDE"],
 }
 
-DEFAULT_PER_GEN_AI: int = 1750     # 1250 train + 500 test
+DEFAULT_PER_GEN_AI: int = 1750  # 1250 train + 500 test
 DEFAULT_PER_GEN_NATURE: int = 1750
 
 IMAGENET_SOURCES: list[str] = [
@@ -50,7 +50,9 @@ IMAGENET_SOURCES: list[str] = [
     "imagenet-1k",
 ]
 
-DRIVE_FALLBACK_HINT = "https://github.com/GenImage-Dataset/GenImage  (see README for per-gen Drive links)"
+DRIVE_FALLBACK_HINT = (
+    "https://github.com/GenImage-Dataset/GenImage  (see README for per-gen Drive links)"
+)
 
 
 def _safe_log(msg: str) -> None:
@@ -78,7 +80,9 @@ def _download_one_generator_from_hf(
                 allow_patterns=["*.jpg", "*.jpeg", "*.png", "*.parquet"],
             )
             elapsed = time.time() - t0
-            sources_tried.append({"repo_id": repo_id, "status": "downloaded", "elapsed_s": elapsed, "local": local})
+            sources_tried.append(
+                {"repo_id": repo_id, "status": "downloaded", "elapsed_s": elapsed, "local": local}
+            )
 
             local_p = Path(local)
             imgs = sorted(
@@ -89,7 +93,9 @@ def _download_one_generator_from_hf(
                 sources_tried[-1]["status"] = "no_images_found"
                 continue
 
-            _safe_log(f"  {repo_id}: found {len(imgs)} images, copying {min(per_gen_ai, len(imgs))} -> {ai_out}")
+            _safe_log(
+                f"  {repo_id}: found {len(imgs)} images, copying {min(per_gen_ai, len(imgs))} -> {ai_out}"
+            )
             rng = random.Random(42)
             rng.shuffle(imgs)
             copied = 0
@@ -108,7 +114,9 @@ def _download_one_generator_from_hf(
             }
         except Exception as e:
             _safe_log(f"  {repo_id} FAILED: {type(e).__name__}: {e}")
-            sources_tried.append({"repo_id": repo_id, "status": "failed", "error": f"{type(e).__name__}: {e}"})
+            sources_tried.append(
+                {"repo_id": repo_id, "status": "failed", "error": f"{type(e).__name__}: {e}"}
+            )
             continue
 
     return {
@@ -128,7 +136,9 @@ def _download_nature_pool(out_root: Path, total_needed: int, cache_dir: Path) ->
     pool_out = out_root / "_nature_pool"
     pool_out.mkdir(parents=True, exist_ok=True)
 
-    existing = sorted([p for p in pool_out.glob("*") if p.suffix.lower() in {".jpg", ".jpeg", ".png"}])
+    existing = sorted(
+        [p for p in pool_out.glob("*") if p.suffix.lower() in {".jpg", ".jpeg", ".png"}]
+    )
     if len(existing) >= total_needed:
         return {"status": "reused_existing", "n_available": len(existing), "source": "cached_pool"}
 
@@ -168,7 +178,9 @@ def _download_nature_pool(out_root: Path, total_needed: int, cache_dir: Path) ->
             }
         except Exception as e:
             _safe_log(f"  {repo_id} FAILED: {type(e).__name__}: {e}")
-            sources_tried.append({"repo_id": repo_id, "status": "failed", "error": f"{type(e).__name__}: {e}"})
+            sources_tried.append(
+                {"repo_id": repo_id, "status": "failed", "error": f"{type(e).__name__}: {e}"}
+            )
             continue
 
     return {
@@ -215,9 +227,12 @@ def main():
     p.add_argument("--out", type=Path, default=Path("data/raw/GenImage_v2"), help="Output root")
     p.add_argument("--per-gen-ai", type=int, default=DEFAULT_PER_GEN_AI)
     p.add_argument("--per-gen-nature", type=int, default=DEFAULT_PER_GEN_NATURE)
-    p.add_argument("--cache-dir", type=Path,
-                   default=Path.home() / ".cache" / "huggingface" / "hub",
-                   help="HF cache directory")
+    p.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=Path.home() / ".cache" / "huggingface" / "hub",
+        help="HF cache directory",
+    )
     args = p.parse_args()
 
     if args.gens == ["all"]:
@@ -239,7 +254,10 @@ def main():
     for g in gens:
         _safe_log(f"--- generator: {g} ---")
         manifest["results"][g] = _download_one_generator_from_hf(
-            g, args.out, args.per_gen_ai, args.cache_dir,
+            g,
+            args.out,
+            args.per_gen_ai,
+            args.cache_dir,
         )
 
     _safe_log("Phase 2: download ImageNet nature pool")
@@ -249,7 +267,9 @@ def main():
     if manifest["nature_pool"].get("status") == "ok":
         _safe_log("Phase 3: distribute nature pool to per-generator nature/ subdirs")
         manifest["nature_distribution"] = _distribute_nature_to_generators(
-            args.out, gens, args.per_gen_nature,
+            args.out,
+            gens,
+            args.per_gen_nature,
         )
 
     manifest["finished_at"] = time.time()

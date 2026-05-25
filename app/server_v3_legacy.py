@@ -14,6 +14,7 @@ Checkpoint: v3/outputs/v3_pipeline_qwen/best.pt
 Run with  : uvicorn app.server:app --host 0.0.0.0 --port 8080
 Public URL: cloudflared tunnel --url http://localhost:8080
 """
+
 from __future__ import annotations
 
 import io
@@ -23,35 +24,35 @@ import time
 import traceback
 from pathlib import Path
 
+import cv2
+
 # IMPORTANT: import torch BEFORE cv2/scipy/torchvision to avoid Windows
 # MKL/OpenBLAS DLL conflicts that silently kill the process.
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from transformers import (AutoModelForCausalLM, AutoTokenizer, BertTokenizer,
-                          CLIPProcessor)
-from torchvision import transforms
-import cv2
-# NOTE: scipy.fftpack.dct segfaults on Windows when scipy's pocketfft DLL
-# conflicts with torch CUDA libs (observed: access violation in _r2r).
-# Use cv2.dct instead — different DLL, same orthonormal type-II DCT.
-from PIL import Image
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+# NOTE: scipy.fftpack.dct segfaults on Windows when scipy's pocketfft DLL
+# conflicts with torch CUDA libs (observed: access violation in _r2r).
+# Use cv2.dct instead — different DLL, same orthonormal type-II DCT.
+from PIL import Image
+from torch import nn
+from torchvision import transforms
+from transformers import AutoModelForCausalLM, AutoTokenizer, BertTokenizer, CLIPProcessor
 
 # ---------------------------------------------------------------------------
 # Path setup
 # ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
-from models.fnd_clip import FNDCLIP                              # noqa: E402
-from models.text_fluoroscopy import (TextForensicProjection,     # noqa: E402
-                                     masked_mean_pool)
-from models.univfd_encoder import UnivFDEncoder                  # noqa: E402
-from models.v3_pipeline import V3FusionModule                    # noqa: E402
+from models.fnd_clip import FNDCLIP  # noqa: E402
+from models.text_fluoroscopy import TextForensicProjection, masked_mean_pool  # noqa: E402
+from models.univfd_encoder import UnivFDEncoder  # noqa: E402
+from models.v3_pipeline import V3FusionModule  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Config
@@ -72,10 +73,14 @@ DCT_SIZE = 224
 DCT_PATCH = 8
 JPEG_QUALITY = 85
 
-LABEL_NAMES = {0: "Real", 1: "Out-of-Context", 2: "Manipulated",
-               3: "AI-Text", 4: "Fully Fabricated"}
-LABEL_NAMES_AR = {0: "حقيقي", 1: "خارج السياق", 2: "معدَّل",
-                  3: "نص مولَّد", 4: "ملفَّق بالكامل"}
+LABEL_NAMES = {
+    0: "Real",
+    1: "Out-of-Context",
+    2: "Manipulated",
+    3: "AI-Text",
+    4: "Fully Fabricated",
+}
+LABEL_NAMES_AR = {0: "حقيقي", 1: "خارج السياق", 2: "معدَّل", 3: "نص مولَّد", 4: "ملفَّق بالكامل"}
 
 # ---------------------------------------------------------------------------
 # Model loading (runs once at startup)
@@ -87,15 +92,19 @@ t0 = time.time()
 fnd_clip = FNDCLIP(feat_dim=512, num_classes=1)
 fnd_state = torch.load(FND_CKPT, map_location="cpu", weights_only=False)
 fnd_state = fnd_state.get("model_state", fnd_state)
-compat = {k: v for k, v in fnd_state.items()
-          if k in fnd_clip.state_dict()
-          and fnd_clip.state_dict()[k].shape == v.shape}
+compat = {
+    k: v
+    for k, v in fnd_state.items()
+    if k in fnd_clip.state_dict() and fnd_clip.state_dict()[k].shape == v.shape
+}
 fnd_clip.load_state_dict(compat, strict=False)
 fnd_clip = fnd_clip.to(DEVICE).eval()
 for p in fnd_clip.parameters():
     p.requires_grad = False
-print(f"  loaded {len(compat)}/{len(fnd_clip.state_dict())} tensors "
-      f"({time.time() - t0:.1f}s)", flush=True)
+print(
+    f"  loaded {len(compat)}/{len(fnd_clip.state_dict())} tensors ({time.time() - t0:.1f}s)",
+    flush=True,
+)
 
 print(f"[startup] loading UnivFD from {UNIVFD_CKPT.name} ...", flush=True)
 t0 = time.time()
@@ -104,19 +113,24 @@ univfd_ck = torch.load(UNIVFD_CKPT, map_location="cpu", weights_only=False)
 univfd_state = univfd_ck.get("model_state", univfd_ck)
 # Stage-1 wraps UnivFDEncoder as `self.encoder.*` - strip prefix.
 univfd_enc_state = {
-    k[len("encoder."):]: v
-    for k, v in univfd_state.items() if k.startswith("encoder.")
+    k[len("encoder.") :]: v for k, v in univfd_state.items() if k.startswith("encoder.")
 }
 missing, unexpected = univfd.load_state_dict(univfd_enc_state, strict=False)
 univfd = univfd.to(DEVICE).eval()
 for p in univfd.parameters():
     p.requires_grad = False
-print(f"  loaded {len(univfd_enc_state)}/{len(univfd.state_dict())} tensors "
-      f"(missing={len(missing)}, unexpected={len(unexpected)}) "
-      f"({time.time() - t0:.1f}s)", flush=True)
+print(
+    f"  loaded {len(univfd_enc_state)}/{len(univfd.state_dict())} tensors "
+    f"(missing={len(missing)}, unexpected={len(unexpected)}) "
+    f"({time.time() - t0:.1f}s)",
+    flush=True,
+)
 
-print(f"[startup] loading Qwen2-7B-Instruct (fp16, device_map=auto, "
-      f"GPU cap {QWEN_GPU_MEM_GIB} GiB) ...", flush=True)
+print(
+    f"[startup] loading Qwen2-7B-Instruct (fp16, device_map=auto, "
+    f"GPU cap {QWEN_GPU_MEM_GIB} GiB) ...",
+    flush=True,
+)
 t0 = time.time()
 qwen_tok = AutoTokenizer.from_pretrained(QWEN_MODEL)
 if qwen_tok.pad_token_id is None:
@@ -131,10 +145,12 @@ qwen_model = AutoModelForCausalLM.from_pretrained(
     low_cpu_mem_usage=True,
 )
 qwen_model.eval()
-QWEN_HIDDEN = qwen_model.config.hidden_size      # 3584 for Qwen2-7B-Instruct
+QWEN_HIDDEN = qwen_model.config.hidden_size  # 3584 for Qwen2-7B-Instruct
 QWEN_LAYERS = qwen_model.config.num_hidden_layers
-print(f"  hidden_size={QWEN_HIDDEN}  num_hidden_layers={QWEN_LAYERS}  "
-      f"({time.time() - t0:.1f}s)", flush=True)
+print(
+    f"  hidden_size={QWEN_HIDDEN}  num_hidden_layers={QWEN_LAYERS}  ({time.time() - t0:.1f}s)",
+    flush=True,
+)
 
 print(f"[startup] loading V3 fusion ckpt {V3_CKPT.name} ...", flush=True)
 t0 = time.time()
@@ -144,12 +160,12 @@ FEAT_DIM = int(mcfg.get("feat_dim", 768))
 SEM_IN = int(mcfg.get("sem_in_dim", 512))
 TXT_IN = int(mcfg.get("txt_in_dim", QWEN_HIDDEN))
 if TXT_IN != QWEN_HIDDEN:
-    print(f"  WARNING: ckpt txt_in_dim={TXT_IN} != Qwen hidden={QWEN_HIDDEN}",
-          flush=True)
+    print(f"  WARNING: ckpt txt_in_dim={TXT_IN} != Qwen hidden={QWEN_HIDDEN}", flush=True)
 
 
 class _SemProj(nn.Module):
     """Mirror of v3/src/train_v3_pipeline.py::_Projector - Linear + GELU."""
+
     def __init__(self, in_dim: int, out_dim: int):
         super().__init__()
         self.linear = nn.Linear(in_dim, out_dim)
@@ -160,8 +176,7 @@ class _SemProj(nn.Module):
 
 
 sem_proj = _SemProj(SEM_IN, FEAT_DIM).to(DEVICE)
-text_proj = TextForensicProjection(input_dim=TXT_IN,
-                                   output_dim=FEAT_DIM).to(DEVICE)
+text_proj = TextForensicProjection(input_dim=TXT_IN, output_dim=FEAT_DIM).to(DEVICE)
 v3_fusion = V3FusionModule(
     feat_dim=FEAT_DIM,
     fused_dim=int(mcfg.get("fused_dim", 1024)),
@@ -173,29 +188,37 @@ v3_fusion = V3FusionModule(
 v3_fusion.load_state_dict(v3_ck["model_state"])
 sem_proj.load_state_dict(v3_ck["sem_proj_state"])
 text_proj.load_state_dict(v3_ck["text_proj_state"])
-v3_fusion.eval(); sem_proj.eval(); text_proj.eval()
+v3_fusion.eval()
+sem_proj.eval()
+text_proj.eval()
 for m in (v3_fusion, sem_proj, text_proj):
     for p in m.parameters():
         p.requires_grad = False
 val_f1 = v3_ck.get("val_metrics", {}).get("f1_macro", float("nan"))
-print(f"  loaded ckpt epoch {v3_ck.get('epoch', '?')} "
-      f"(val F1-macro {val_f1:.4f}) ({time.time() - t0:.1f}s)", flush=True)
+print(
+    f"  loaded ckpt epoch {v3_ck.get('epoch', '?')} "
+    f"(val F1-macro {val_f1:.4f}) ({time.time() - t0:.1f}s)",
+    flush=True,
+)
 
 # Tokenizers / preprocessors for FND-CLIP front-end.
 bert_tok = BertTokenizer.from_pretrained("bert-base-uncased")
 clip_proc = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-image_tf = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-])
+image_tf = transforms.Compose(
+    [
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    ]
+)
 
 print("[startup] all models loaded.", flush=True)
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _patch_dct(y: np.ndarray, patch_size: int = DCT_PATCH) -> np.ndarray:
     """Tile-wise 2D-DCT on the Y channel, log-magnitude per patch.
@@ -206,10 +229,9 @@ def _patch_dct(y: np.ndarray, patch_size: int = DCT_PATCH) -> np.ndarray:
     y32 = y.astype(np.float32)
     for i in range(0, h, patch_size):
         for j in range(0, w, patch_size):
-            block = y32[i:i + patch_size, j:j + patch_size]
+            block = y32[i : i + patch_size, j : j + patch_size]
             coeffs = cv2.dct(block)
-            out[i:i + patch_size, j:j + patch_size] = np.log(
-                np.abs(coeffs) + 1e-8)
+            out[i : i + patch_size, j : j + patch_size] = np.log(np.abs(coeffs) + 1e-8)
     return out
 
 
@@ -219,14 +241,12 @@ def compute_patch_dct_from_pil(pil_img: Image.Image) -> torch.Tensor:
     rgb = np.array(pil_img.convert("RGB"))
     bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
     # Uniform JPEG re-encode (kills source-distribution shortcut).
-    ok, buf = cv2.imencode(".jpg", bgr,
-                           [int(cv2.IMWRITE_JPEG_QUALITY), JPEG_QUALITY])
+    ok, buf = cv2.imencode(".jpg", bgr, [int(cv2.IMWRITE_JPEG_QUALITY), JPEG_QUALITY])
     if ok:
         decoded = cv2.imdecode(buf, cv2.IMREAD_COLOR)
         if decoded is not None:
             bgr = decoded
-    bgr = cv2.resize(bgr, (DCT_SIZE, DCT_SIZE),
-                     interpolation=cv2.INTER_AREA)
+    bgr = cv2.resize(bgr, (DCT_SIZE, DCT_SIZE), interpolation=cv2.INTER_AREA)
     ycbcr = cv2.cvtColor(bgr, cv2.COLOR_BGR2YCrCb)
     y = ycbcr[:, :, 0].astype(np.float32)
     log_mag = _patch_dct(y, patch_size=DCT_PATCH)
@@ -241,32 +261,39 @@ def compute_patch_dct_from_pil(pil_img: Image.Image) -> torch.Tensor:
 def prepare_fnd_inputs(text: str, pil_img: Image.Image) -> dict:
     """Build the inputs FND-CLIP.forward_semantic expects."""
     img_tensor = image_tf(pil_img)
-    bert = bert_tok(text, padding="max_length", truncation=True,
-                    max_length=128, return_tensors="pt")
-    clip = clip_proc(images=pil_img, text=text, return_tensors="pt",
-                     padding="max_length", truncation=True, max_length=77)
+    bert = bert_tok(
+        text, padding="max_length", truncation=True, max_length=128, return_tensors="pt"
+    )
+    clip = clip_proc(
+        images=pil_img,
+        text=text,
+        return_tensors="pt",
+        padding="max_length",
+        truncation=True,
+        max_length=77,
+    )
     return {
-        "image":       img_tensor.unsqueeze(0),
-        "bert_ids":    bert["input_ids"],
-        "bert_mask":   bert["attention_mask"],
+        "image": img_tensor.unsqueeze(0),
+        "bert_ids": bert["input_ids"],
+        "bert_mask": bert["attention_mask"],
         "clip_pixels": clip["pixel_values"],
-        "clip_ids":    clip["input_ids"],
-        "clip_mask":   clip["attention_mask"],
+        "clip_ids": clip["input_ids"],
+        "clip_mask": clip["attention_mask"],
     }
 
 
 def encode_text_qwen(text: str) -> torch.Tensor:
     """Tokenize -> Qwen forward -> last hidden -> masked mean pool.
     Returns [1, QWEN_HIDDEN] float32 on DEVICE."""
-    enc = qwen_tok([text], return_tensors="pt", padding=True,
-                   truncation=True, max_length=QWEN_MAX_LEN)
+    enc = qwen_tok(
+        [text], return_tensors="pt", padding=True, truncation=True, max_length=QWEN_MAX_LEN
+    )
     # accelerate (device_map='auto') accepts inputs on cuda:0; it forwards
     # tensors across devices internally for CPU-offloaded layers.
     enc = {k: v.to(DEVICE) for k, v in enc.items()}
     out = qwen_model(**enc, output_hidden_states=True)
-    h = out.hidden_states[-1]                          # [1, S, H], fp16
-    pooled = masked_mean_pool(h.float(),
-                              enc["attention_mask"])    # [1, H], fp32
+    h = out.hidden_states[-1]  # [1, S, H], fp16
+    pooled = masked_mean_pool(h.float(), enc["attention_mask"])  # [1, H], fp32
     return pooled.to(DEVICE)
 
 
@@ -274,25 +301,34 @@ def encode_text_qwen(text: str) -> torch.Tensor:
 # FastAPI app
 # ---------------------------------------------------------------------------
 app = FastAPI(title="MultiGuard")
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
-                   allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 EXPLANATIONS_EN = {
-    0: ("The text and image appear genuine and well-aligned. No "
-        "significant manipulation or out-of-context usage detected."),
-    1: ("The image and text appear genuine individually, but the "
+    0: (
+        "The text and image appear genuine and well-aligned. No "
+        "significant manipulation or out-of-context usage detected."
+    ),
+    1: (
+        "The image and text appear genuine individually, but the "
         "cross-modal module detected low semantic alignment between "
-        "them, suggesting the image was used out of context."),
-    2: ("The image shows signs of digital manipulation. The forensic "
+        "them, suggesting the image was used out of context."
+    ),
+    2: (
+        "The image shows signs of digital manipulation. The forensic "
         "encoder detected inconsistencies in the pixel-level artifacts, "
-        "suggesting the image has been altered."),
-    3: ("The text shows patterns consistent with AI-generated content. "
+        "suggesting the image has been altered."
+    ),
+    3: (
+        "The text shows patterns consistent with AI-generated content. "
         "The text forensic module detected linguistic signatures "
-        "typical of large language model outputs."),
-    4: ("Both image and text show signs of fabrication. The forensic "
+        "typical of large language model outputs."
+    ),
+    4: (
+        "Both image and text show signs of fabrication. The forensic "
         "modules detected manipulated visuals paired with AI-generated "
-        "text."),
+        "text."
+    ),
 }
 EXPLANATIONS_AR = {
     0: "يبدو أن النص والصورة حقيقيان ومتطابقان. لم يتم اكتشاف أي تعديل أو استخدام خارج السياق.",
@@ -313,8 +349,8 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
 
         # ---- 2. Build inputs for each stream ----
         fnd_in = prepare_fnd_inputs(text, pil_img)
-        dct_map = compute_patch_dct_from_pil(pil_img)          # [1, 224, 224]
-        dct_batch = dct_map.unsqueeze(0).to(DEVICE)            # [1, 1, 224, 224]
+        dct_map = compute_patch_dct_from_pil(pil_img)  # [1, 224, 224]
+        dct_batch = dct_map.unsqueeze(0).to(DEVICE)  # [1, 1, 224, 224]
 
         # ---- 3. Run all three encoders + fusion ----
         with torch.no_grad():
@@ -338,10 +374,10 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
             out = v3_fusion(v_sem768, v_imgfor, v_txt768)
 
         # ---- 4. Probabilities ----
-        main_logits = out["main_logits"][0]                    # [5]
-        aux_logits  = out["aux_logits"][0]                     # [2]
+        main_logits = out["main_logits"][0]  # [5]
+        aux_logits = out["aux_logits"][0]  # [2]
         probs = F.softmax(main_logits, dim=0).cpu().tolist()
-        aux_probs = torch.sigmoid(aux_logits).cpu().tolist()   # [P(real), P(fake)]
+        aux_probs = torch.sigmoid(aux_logits).cpu().tolist()  # [P(real), P(fake)]
 
         pred_idx = int(np.argmax(probs))
         confidence = float(probs[pred_idx])
@@ -349,40 +385,42 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
         # Class-index mapping matches both training and UI:
         # 0=Real, 1=OOC, 2=Manipulated, 3=AI-Text, 4=Fully-Fabricated.
         prob_dict = {
-            "Real":             round(float(probs[0]), 4),
-            "Out-of-Context":   round(float(probs[1]), 4),
-            "Manipulated":      round(float(probs[2]), 4),
-            "AI-Text":          round(float(probs[3]), 4),
+            "Real": round(float(probs[0]), 4),
+            "Out-of-Context": round(float(probs[1]), 4),
+            "Manipulated": round(float(probs[2]), 4),
+            "AI-Text": round(float(probs[3]), 4),
             "Fully-Fabricated": round(float(probs[4]), 4),
         }
 
         # Module scores - interpretable summaries built from class probs +
         # the aux image-forensic head (which was trained on binary
         # "image is AI/tampered" = class in {Manipulated, Fully-Fab}).
-        text_ai      = float(probs[3]) + float(probs[4])       # AI-Text + Fab
-        image_manip  = float(probs[2]) + float(probs[4])       # Manip + Fab
-        cross_modal  = float(probs[1])                          # OOC
+        text_ai = float(probs[3]) + float(probs[4])  # AI-Text + Fab
+        image_manip = float(probs[2]) + float(probs[4])  # Manip + Fab
+        cross_modal = float(probs[1])  # OOC
         text_patterns = min(1.0, 0.5 * text_ai + 0.5 * cross_modal)
-        overall      = 1.0 - float(probs[0])                    # 1 - P(Real)
+        overall = 1.0 - float(probs[0])  # 1 - P(Real)
 
         modules = {
-            "text_ai":       round(text_ai, 2),
+            "text_ai": round(text_ai, 2),
             "text_patterns": round(text_patterns, 2),
-            "image_manip":   round(max(image_manip, float(aux_probs[1])), 2),
-            "cross_modal":   round(cross_modal, 2),
-            "overall":       round(overall, 2),
+            "image_manip": round(max(image_manip, float(aux_probs[1])), 2),
+            "cross_modal": round(cross_modal, 2),
+            "overall": round(overall, 2),
         }
 
-        return JSONResponse({
-            "verdict":       LABEL_NAMES[pred_idx],
-            "verdict_ar":    LABEL_NAMES_AR[pred_idx],
-            "confidence":    round(confidence * 100, 1),
-            "label_index":   pred_idx,
-            "probabilities": prob_dict,
-            "modules":       modules,
-            "explanation":   EXPLANATIONS_EN[pred_idx],
-            "explanation_ar": EXPLANATIONS_AR[pred_idx],
-        })
+        return JSONResponse(
+            {
+                "verdict": LABEL_NAMES[pred_idx],
+                "verdict_ar": LABEL_NAMES_AR[pred_idx],
+                "confidence": round(confidence * 100, 1),
+                "label_index": pred_idx,
+                "probabilities": prob_dict,
+                "modules": modules,
+                "explanation": EXPLANATIONS_EN[pred_idx],
+                "explanation_ar": EXPLANATIONS_AR[pred_idx],
+            }
+        )
 
     except Exception as e:
         traceback.print_exc()
@@ -392,22 +430,23 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
 @app.get("/api/health")
 async def health():
     return {
-        "status":  "ok",
-        "model":   "v3_pipeline_qwen",
+        "status": "ok",
+        "model": "v3_pipeline_qwen",
         "classes": NUM_CLASSES,
-        "device":  DEVICE,
+        "device": DEVICE,
         "encoders": {
-            "fnd_clip":  str(FND_CKPT.name),
-            "univfd":    str(UNIVFD_CKPT.name),
-            "qwen":      QWEN_MODEL,
-            "fusion":    str(V3_CKPT.relative_to(ROOT)),
+            "fnd_clip": str(FND_CKPT.name),
+            "univfd": str(UNIVFD_CKPT.name),
+            "qwen": QWEN_MODEL,
+            "fusion": str(V3_CKPT.relative_to(ROOT)),
         },
     }
 
 
 # Serve static files (UI).
-app.mount("/", StaticFiles(directory=str(Path(__file__).parent / "static"),
-                           html=True), name="static")
+app.mount(
+    "/", StaticFiles(directory=str(Path(__file__).parent / "static"), html=True), name="static"
+)
 
 
 if __name__ == "__main__":
@@ -415,4 +454,5 @@ if __name__ == "__main__":
     # dance, which on Windows can cause the module to be imported twice in
     # the reloader/worker process and OOM during the heavy model loads.
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")

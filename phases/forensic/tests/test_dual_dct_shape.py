@@ -2,6 +2,7 @@
 
 Doctor's spec demands output [1, 224, 224] float32. Anything else fails this test.
 """
+
 from __future__ import annotations
 
 import numpy as np

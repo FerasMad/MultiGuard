@@ -1,9 +1,10 @@
 """V3.1 section 6: classifier MLP exact shape."""
+
 from __future__ import annotations
 
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 @pytest.mark.spec_compliance
@@ -20,10 +21,7 @@ def test_mlp_classifier_layers():
     assert y.shape == (8, 5)
 
     # Spec section 6: Dropout(0.5) must be present
-    has_dropout_05 = any(
-        isinstance(m, nn.Dropout) and abs(m.p - 0.5) < 1e-6
-        for m in cls.modules()
-    )
+    has_dropout_05 = any(isinstance(m, nn.Dropout) and abs(m.p - 0.5) < 1e-6 for m in cls.modules())
     assert has_dropout_05, "V3.1 section 6 requires Dropout(0.5)"
 
     # Spec: BatchNorm after first Linear

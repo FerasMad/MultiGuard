@@ -9,12 +9,13 @@ Student 1's deliverable. ResNet-50 with:
 Input:  v_imgfor_dct [B, 1, 224, 224]   (patch-DCT map from preprocessing/patch_dct.py)
 Output: v_imgfor     [B, 768]           (forensic feature vector)
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torchvision import models
 
 from v4.core.checkpoints import strip_prefix
@@ -98,8 +99,9 @@ class UnivFDEncoder(EncoderBase):
         # blur_jpg state keys may or may not have a 'module.' prefix from old DDP runs.
         state = {k.removeprefix("module."): v for k, v in state.items()}
         missing, unexpected = self.backbone.load_state_dict(state, strict=False)
-        log.info("UnivFD loaded blur_jpg_v0 (missing=%d, unexpected=%d)",
-                 len(missing), len(unexpected))
+        log.info(
+            "UnivFD loaded blur_jpg_v0 (missing=%d, unexpected=%d)", len(missing), len(unexpected)
+        )
 
     def load_legacy_checkpoint(self, path: str | Path) -> None:
         """Load a Stage-1-trained UnivFD checkpoint.
@@ -115,10 +117,14 @@ class UnivFDEncoder(EncoderBase):
             missing, unexpected = self.load_state_dict(enc_state, strict=False)
         else:
             missing, unexpected = self.load_state_dict(state, strict=False)
-        log.info("UnivFD loaded from %s (missing=%d, unexpected=%d)",
-                 p.name, len(missing), len(unexpected))
+        log.info(
+            "UnivFD loaded from %s (missing=%d, unexpected=%d)",
+            p.name,
+            len(missing),
+            len(unexpected),
+        )
 
     def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
-        x = batch["v_imgfor_dct"]   # [B, 1, 224, 224]
-        feats = self.backbone(x)    # [B, 2048]
-        return self.head(feats)     # [B, out_dim]
+        x = batch["v_imgfor_dct"]  # [B, 1, 224, 224]
+        feats = self.backbone(x)  # [B, 2048]
+        return self.head(feats)  # [B, out_dim]

@@ -26,18 +26,19 @@ Saves:
 CRITICAL: the unit test `tests/test_two_phase_trainer.py` enforces 4 invariants
 at the Phase 1 -> Phase 2 boundary. Read it before modifying this file.
 """
+
 from __future__ import annotations
 
 import csv
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 import torch
-import torch.nn as nn
 from sklearn.metrics import average_precision_score
+from torch import nn
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
@@ -48,15 +49,14 @@ from forensic.models.dct_resnet50 import (
     unfreeze_phase2,
 )
 
-
 # Doctor-spec constants (locked)
-PHASE1_EPOCHS: int = 5            # epochs 1..5 = Phase 1
+PHASE1_EPOCHS: int = 5  # epochs 1..5 = Phase 1
 PHASE1_LR: float = 1e-4
 PHASE2_LR: float = 1e-5
 WEIGHT_DECAY: float = 1e-4
 SCHEDULER_FACTOR: float = 0.5
-SCHEDULER_PATIENCE: int = 3       # ReduceLROnPlateau patience (different from early-stop patience)
-EARLY_STOP_PATIENCE: int = 5      # On val AP plateau
+SCHEDULER_PATIENCE: int = 3  # ReduceLROnPlateau patience (different from early-stop patience)
+EARLY_STOP_PATIENCE: int = 5  # On val AP plateau
 PHASE2_GRAD_CLIP_MAX_NORM: float = 1.0
 
 
@@ -116,13 +116,15 @@ class TwoPhaseTrainer:
         self.out_dir = Path(out_dir)
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self.max_epochs = max_epochs
-        self.device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
+        self.device = device or (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        )
         self.on_epoch_end = on_epoch_end
 
         # State
         self.current_phase: int = 1
         self.current_epoch: int = 0
-        self._apply_grad_clip: bool = False    # I4: starts False (Phase 1), True after transition
+        self._apply_grad_clip: bool = False  # I4: starts False (Phase 1), True after transition
         self.early_stop = EarlyStopState()
 
         # Loss is constant across phases
@@ -185,7 +187,10 @@ class TwoPhaseTrainer:
         total_loss = 0.0
         n_samples = 0
         for batch in self.train_loader:
-            x, y = batch[0].to(self.device, non_blocking=True), batch[1].to(self.device, non_blocking=True)
+            x, y = (
+                batch[0].to(self.device, non_blocking=True),
+                batch[1].to(self.device, non_blocking=True),
+            )
             self.optimizer.zero_grad(set_to_none=True)
             logits = self.model(x).squeeze(-1)
             loss = self.criterion(logits, y.float())
@@ -252,7 +257,18 @@ class TwoPhaseTrainer:
 
         with open(history_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["epoch", "phase", "train_loss", "val_ap", "val_acc", "lr", "patience_left", "is_best"])
+            writer.writerow(
+                [
+                    "epoch",
+                    "phase",
+                    "train_loss",
+                    "val_ap",
+                    "val_acc",
+                    "lr",
+                    "patience_left",
+                    "is_best",
+                ]
+            )
 
         for epoch in range(1, self.max_epochs + 1):
             self.current_epoch = epoch
@@ -270,15 +286,17 @@ class TwoPhaseTrainer:
 
             # Early-stop update
             is_best = self.early_stop.update(epoch, val_ap)
-            self.early_stop.history.append({
-                "epoch": epoch,
-                "phase": self.current_phase,
-                "train_loss": train_loss,
-                "val_ap": val_ap,
-                "val_acc": val_acc,
-                "lr": self.optimizer.param_groups[0]["lr"],
-                "patience_left": self.early_stop.patience_left,
-            })
+            self.early_stop.history.append(
+                {
+                    "epoch": epoch,
+                    "phase": self.current_phase,
+                    "train_loss": train_loss,
+                    "val_ap": val_ap,
+                    "val_acc": val_acc,
+                    "lr": self.optimizer.param_groups[0]["lr"],
+                    "patience_left": self.early_stop.patience_left,
+                }
+            )
 
             # Persist
             self._save_checkpoint(latest_path, epoch, val_ap, val_acc)
@@ -287,20 +305,32 @@ class TwoPhaseTrainer:
 
             with open(history_path, "a", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow([
-                    epoch, self.current_phase, f"{train_loss:.6f}",
-                    f"{val_ap:.6f}", f"{val_acc:.6f}",
-                    f"{self.optimizer.param_groups[0]['lr']:.2e}",
-                    self.early_stop.patience_left, int(is_best),
-                ])
+                writer.writerow(
+                    [
+                        epoch,
+                        self.current_phase,
+                        f"{train_loss:.6f}",
+                        f"{val_ap:.6f}",
+                        f"{val_acc:.6f}",
+                        f"{self.optimizer.param_groups[0]['lr']:.2e}",
+                        self.early_stop.patience_left,
+                        int(is_best),
+                    ]
+                )
 
             if self.on_epoch_end is not None:
-                self.on_epoch_end(epoch=epoch, phase=self.current_phase, metrics={
-                    "train_loss": train_loss, "val_ap": val_ap, "val_acc": val_acc,
-                    "lr": self.optimizer.param_groups[0]["lr"],
-                    "patience_left": self.early_stop.patience_left,
-                    "is_best": is_best,
-                })
+                self.on_epoch_end(
+                    epoch=epoch,
+                    phase=self.current_phase,
+                    metrics={
+                        "train_loss": train_loss,
+                        "val_ap": val_ap,
+                        "val_acc": val_acc,
+                        "lr": self.optimizer.param_groups[0]["lr"],
+                        "patience_left": self.early_stop.patience_left,
+                        "is_best": is_best,
+                    },
+                )
 
             print(
                 f"epoch={epoch:02d}  phase={self.current_phase}  "
@@ -310,7 +340,9 @@ class TwoPhaseTrainer:
             )
 
             if self.early_stop.stopped:
-                print(f"Early-stop at epoch {epoch} (patience={self.early_stop.patience} on val AP)")
+                print(
+                    f"Early-stop at epoch {epoch} (patience={self.early_stop.patience} on val AP)"
+                )
                 break
 
         # Copy best -> doctor-spec filename
@@ -329,14 +361,14 @@ class TwoPhaseTrainer:
 
 
 __all__ = [
-    "TwoPhaseTrainer",
-    "EarlyStopState",
+    "EARLY_STOP_PATIENCE",
     "PHASE1_EPOCHS",
     "PHASE1_LR",
+    "PHASE2_GRAD_CLIP_MAX_NORM",
     "PHASE2_LR",
-    "WEIGHT_DECAY",
     "SCHEDULER_FACTOR",
     "SCHEDULER_PATIENCE",
-    "EARLY_STOP_PATIENCE",
-    "PHASE2_GRAD_CLIP_MAX_NORM",
+    "WEIGHT_DECAY",
+    "EarlyStopState",
+    "TwoPhaseTrainer",
 ]

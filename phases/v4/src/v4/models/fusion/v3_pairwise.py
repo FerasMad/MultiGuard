@@ -14,10 +14,11 @@ Per V3.1 spec 5.1-5.4:
 Plus V3.1 section 6 classifier MLP (in models/classifier/mlp_head.py).
 Plus V3.1 section 5.5 auxiliary binary head with v_imgfor.detach().
 """
+
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from v4.core.registry import FUSION_REGISTRY, register
 from v4.models.classifier.mlp_head import MLPClassifier
@@ -35,10 +36,16 @@ class PairwiseCrossAttention(nn.Module):
     def __init__(self, dim: int = 768, num_heads: int = 8, dropout: float = 0.1):
         super().__init__()
         self.attn_x_to_y = nn.MultiheadAttention(
-            embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True,
+            embed_dim=dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True,
         )
         self.attn_y_to_x = nn.MultiheadAttention(
-            embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True,
+            embed_dim=dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True,
         )
         self.norm = nn.LayerNorm(dim)
 

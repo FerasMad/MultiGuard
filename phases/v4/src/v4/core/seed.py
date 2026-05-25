@@ -5,6 +5,7 @@ See plan §8 (Reproducibility) for the policy. Strict cudnn determinism is OPT-I
 throughput. Default behavior: seed everything but allow non-deterministic CUDA
 kernels for speed.
 """
+
 from __future__ import annotations
 
 import os
@@ -56,6 +57,7 @@ def snapshot_rng_state() -> dict:
     }
     try:
         import torch
+
         out["torch"] = torch.get_rng_state()
         if torch.cuda.is_available():
             out["cuda"] = torch.cuda.get_rng_state_all()
@@ -72,6 +74,7 @@ def restore_rng_state(state: dict) -> None:
         np.random.set_state(state["numpy"])
     try:
         import torch
+
         if "torch" in state:
             torch.set_rng_state(state["torch"])
         if "cuda" in state and torch.cuda.is_available():

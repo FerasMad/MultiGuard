@@ -1,4 +1,5 @@
 """Download CNNDetection blur_jpg_v0.pth (UnivFD initialization)."""
+
 from __future__ import annotations
 
 import sys
@@ -9,6 +10,7 @@ URL = "https://github.com/PeterWang512/CNNDetection/releases/download/v1.0/blur_
 
 def download(dest: Path) -> None:
     import urllib.request
+
     dest.parent.mkdir(parents=True, exist_ok=True)
     print(f"downloading {URL} -> {dest}")
     urllib.request.urlretrieve(URL, dest)

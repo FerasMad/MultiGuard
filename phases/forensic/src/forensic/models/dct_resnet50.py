@@ -17,10 +17,11 @@ Training phases (see forensic.training.two_phase_trainer):
 Doctor's spec explicitly says "Do NOT use any ResNet file from the FakeImageDetection
 repository" for Approach 2 - we use stock torchvision.
 """
+
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torchvision import models
 
 
@@ -71,9 +72,7 @@ def build_dct_resnet50(pretrained: bool = True) -> nn.Module:
 PHASE1_TRAINABLE: tuple[str, ...] = ("conv1", "bn1", "layer3", "layer4", "fc")
 PHASE1_FROZEN: tuple[str, ...] = ("layer1", "layer2")
 
-PHASE2_TRAINABLE: tuple[str, ...] = (
-    "conv1", "bn1", "layer1", "layer2", "layer3", "layer4", "fc"
-)
+PHASE2_TRAINABLE: tuple[str, ...] = ("conv1", "bn1", "layer1", "layer2", "layer3", "layer4", "fc")
 
 
 def freeze_phase1(model: nn.Module) -> None:
@@ -114,12 +113,12 @@ def count_trainable_params(model: nn.Module) -> int:
 
 
 __all__ = [
-    "build_dct_resnet50",
-    "freeze_phase1",
-    "unfreeze_phase2",
-    "trainable_params",
-    "count_trainable_params",
-    "PHASE1_TRAINABLE",
     "PHASE1_FROZEN",
+    "PHASE1_TRAINABLE",
     "PHASE2_TRAINABLE",
+    "build_dct_resnet50",
+    "count_trainable_params",
+    "freeze_phase1",
+    "trainable_params",
+    "unfreeze_phase2",
 ]

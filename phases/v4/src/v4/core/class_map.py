@@ -4,6 +4,7 @@ Centralizes the label_index ↔ name mapping so future students who want a 6th
 class or a 3-class collapse only edit this file. Also defines which class
 indices count as "fake image" for the binary aux head per V3.1 §5.5.
 """
+
 from __future__ import annotations
 
 # Per V3.1 §2 table:

@@ -2,6 +2,7 @@
 
 Asserts the fusion module sums direction_1 + direction_2 element-wise, not concat.
 """
+
 from __future__ import annotations
 
 import pytest

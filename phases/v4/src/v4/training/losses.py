@@ -3,22 +3,24 @@
 Supports Stage 1 (single BCE) and Stage 2 (CE + 0.1 * BCE aux with detach)
 via the same loss config schema.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 @dataclass
 class LossSpec:
     """One term of a composite loss."""
-    type: str            # "ce" | "bce" | "bce_logits"
-    target: str          # key in model output dict (e.g. "main_logits", "aux_logits")
+
+    type: str  # "ce" | "bce" | "bce_logits"
+    target: str  # key in model output dict (e.g. "main_logits", "aux_logits")
     weight: float = 1.0
-    detach_input: str | None = None    # for V3.1 section 5.5 aux gradient isolation
+    detach_input: str | None = None  # for V3.1 section 5.5 aux gradient isolation
 
 
 class CompositeLoss(nn.Module):

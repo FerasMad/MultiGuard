@@ -6,12 +6,14 @@ the right subpackage and add a `@register(REGISTRY, "name")` decorator.
 
 See docs/ADD_ENCODER.md for the contributor walkthrough.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from torch.utils.data import Dataset
+
     from v4.models.encoders.base import EncoderBase
     from v4.models.fusion.base import FusionBase
 
@@ -29,6 +31,7 @@ def register(registry: dict[str, type], name: str):
         class UnivFDEncoder(EncoderBase):
             ...
     """
+
     def deco(cls: type) -> type:
         if name in registry:
             raise ValueError(f"Registry already contains key {name!r}: {registry[name]}")
@@ -36,10 +39,11 @@ def register(registry: dict[str, type], name: str):
         # Attach the registered name for introspection.
         cls.name = name  # type: ignore[attr-defined]
         return cls
+
     return deco
 
 
-def build_encoder(spec: dict) -> "EncoderBase":
+def build_encoder(spec: dict) -> EncoderBase:
     """Instantiate an encoder from a YAML spec dict.
 
     The spec must contain a `type` key matching an ENCODER_REGISTRY entry.
@@ -55,7 +59,7 @@ def build_encoder(spec: dict) -> "EncoderBase":
     return cls(**kwargs)
 
 
-def build_fusion(spec: dict) -> "FusionBase":
+def build_fusion(spec: dict) -> FusionBase:
     """Instantiate a fusion module from a YAML spec dict."""
     if "type" not in spec:
         raise ValueError(f"fusion spec missing 'type' key: {spec!r}")
@@ -67,7 +71,7 @@ def build_fusion(spec: dict) -> "FusionBase":
     return cls(**kwargs)
 
 
-def build_dataset(spec: dict) -> "Dataset":
+def build_dataset(spec: dict) -> Dataset:
     """Instantiate a dataset from a YAML spec dict."""
     if "type" not in spec:
         raise ValueError(f"dataset spec missing 'type' key: {spec!r}")
@@ -85,13 +89,12 @@ def import_all() -> None:
     needs the registries populated.
     """
     # Encoders
-    import v4.models.encoders.fnd_clip  # noqa: F401
-    import v4.models.encoders.univfd  # noqa: F401
-    import v4.models.encoders.qwen_text  # noqa: F401
+    # Datasets
+    import v4.data.datasets.cached
+    import v4.data.datasets.runtime
+    import v4.models.encoders.fnd_clip
+    import v4.models.encoders.qwen_text
+    import v4.models.encoders.univfd
 
     # Fusion
     import v4.models.fusion.v3_pairwise  # noqa: F401
-
-    # Datasets
-    import v4.data.datasets.cached  # noqa: F401
-    import v4.data.datasets.runtime  # noqa: F401

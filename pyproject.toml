@@ -95,11 +95,30 @@ extend-exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "PL", "RUF"]
-ignore = ["E501", "PLR0913", "PLR2004", "B008"]
+ignore = [
+    "E501",       # line too long (we use long lines for clarity)
+    "PLR0913",    # too-many-arguments (heavily parameterized training funcs)
+    "PLR2004",    # magic-value-comparison (interferes with tests/specs)
+    "PLR0915",    # too-many-statements (training scripts are inherently long)
+    "PLR0912",    # too-many-branches (CLI scripts have many branches)
+    "PLC0415",    # import-outside-top-level (lazy imports in workers per Risk R2)
+    "PLW2901",    # redefined-loop-name (intentional in our generators)
+    "PLW0603",    # global-statement (registry pattern uses this)
+    "PLR0124",    # comparison-with-itself (used for NaN checks)
+    "B008",       # do-not-perform-call-in-default-argument
+    "SIM108",     # use-ternary (readability preference)
+    "SIM105",     # suppressible-exception (try/except with log is intentional)
+    "RUF046",     # unnecessary-cast-to-int (int() can be clarifying)
+    "RUF059",     # unused-unpacked-variable (Welford tuple unpack)
+    "E702",       # multiple-statements-on-one-line (occasional worker style)
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004", "F401"]
+"phases/*/tests/*" = ["PLR2004", "F401"]
 "__init__.py" = ["F401"]
+"scripts/*" = ["PLC0415"]
+"phases/forensic/scripts/*" = ["PLC0415"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -112,7 +131,7 @@ testpaths = ["phases/v4/tests", "phases/forensic/tests", "tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = ["-ra", "--strict-markers", "--tb=short"]
+addopts = ["-ra", "--strict-markers", "--tb=short", "--import-mode=importlib"]
 markers = [
     "slow: marks tests as slow",
     "gpu: marks tests requiring CUDA",

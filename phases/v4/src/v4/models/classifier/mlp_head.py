@@ -13,10 +13,11 @@ The Dropout(0.5) is essential per the spec: "to prevent the model from
 over-relying on a single modality, forcing it to look at the combined
 relational evidence."
 """
+
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class MLPClassifier(nn.Module):

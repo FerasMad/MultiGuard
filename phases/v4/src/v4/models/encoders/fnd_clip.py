@@ -17,13 +17,14 @@ Output: v_semantic [B, 768]
 
 Faithful re-implementation of FND-CLIP from Zhou et al., IEEE ICME 2023.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 from torchvision import models
 
 from v4.core.checkpoints import shape_compat_filter
@@ -54,6 +55,7 @@ class TextStream(nn.Module):
     def __init__(self, feat_dim: int = 512, bert_name: str = "bert-base-uncased"):
         super().__init__()
         from transformers import BertModel
+
         self.bert = BertModel.from_pretrained(bert_name)
         self.proj = nn.Linear(self.bert.config.hidden_size, feat_dim)
 
@@ -69,6 +71,7 @@ class CLIPStream(nn.Module):
     def __init__(self, clip_name: str = "openai/clip-vit-base-patch32"):
         super().__init__()
         from transformers import CLIPModel
+
         self.clip = CLIPModel.from_pretrained(clip_name)
         for p in self.clip.parameters():
             p.requires_grad = False
@@ -156,13 +159,22 @@ class FNDCLIPSemanticEncoder(EncoderBase):
         missing, unexpected = self.load_state_dict(compat, strict=False)
         log.info(
             "FND-CLIP loaded %d/%d tensors from %s (missing=%d, unexpected=%d)",
-            len(compat), len(self.state_dict()), p.name, len(missing), len(unexpected),
+            len(compat),
+            len(self.state_dict()),
+            p.name,
+            len(missing),
+            len(unexpected),
         )
 
     def forward_semantic(
-        self, *,
-        image: torch.Tensor, bert_ids: torch.Tensor, bert_mask: torch.Tensor,
-        clip_pixels: torch.Tensor, clip_ids: torch.Tensor, clip_mask: torch.Tensor,
+        self,
+        *,
+        image: torch.Tensor,
+        bert_ids: torch.Tensor,
+        bert_mask: torch.Tensor,
+        clip_pixels: torch.Tensor,
+        clip_ids: torch.Tensor,
+        clip_mask: torch.Tensor,
     ) -> torch.Tensor:
         v_img = self.visual(image)
         v_txt = self.text(bert_ids, bert_mask)
@@ -174,9 +186,11 @@ class FNDCLIPSemanticEncoder(EncoderBase):
     def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
         v_sem_native = self.forward_semantic(
             image=batch["image"],
-            bert_ids=batch["bert_ids"], bert_mask=batch["bert_mask"],
+            bert_ids=batch["bert_ids"],
+            bert_mask=batch["bert_mask"],
             clip_pixels=batch["clip_pixels"],
-            clip_ids=batch["clip_ids"], clip_mask=batch["clip_mask"],
+            clip_ids=batch["clip_ids"],
+            clip_mask=batch["clip_mask"],
         )
         return self.sem_proj(v_sem_native)
 

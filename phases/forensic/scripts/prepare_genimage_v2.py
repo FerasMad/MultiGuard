@@ -39,6 +39,7 @@ USAGE:
         --out data/raw/GenImage_v2 \\
         --target-per-gen 1750
 """
+
 from __future__ import annotations
 
 import argparse
@@ -61,10 +62,10 @@ except ImportError:
 
 BITMIND_GENERATORS: dict[str, str] = {
     "wukong": "bitmind/GenImage_Wukong",
-    "vqdm":   "bitmind/GenImage_VQDM",
+    "vqdm": "bitmind/GenImage_VQDM",
     "biggan": "bitmind/GenImage_BigGAN",
-    "adm":    "bitmind/GenImage_ADM",
-    "glide":  "bitmind/GenImage_GLIDE",
+    "adm": "bitmind/GenImage_ADM",
+    "glide": "bitmind/GenImage_GLIDE",
 }
 
 LOCAL_GENERATORS: dict[str, Path] = {
@@ -80,13 +81,13 @@ def _log(msg: str) -> None:
 
 # -------- step 1: midjourney from local --------
 
+
 def stage_local_midjourney(src_dir: Path, dst_dir: Path, n: int, seed: int) -> dict:
     """Copy n images from src_dir to dst_dir as <idx>.jpg."""
     if not src_dir.exists():
         return {"status": "skipped_no_src", "n_copied": 0}
 
-    imgs = sorted([p for p in src_dir.iterdir()
-                   if p.suffix.lower() in {".jpg", ".jpeg", ".png"}])
+    imgs = sorted([p for p in src_dir.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png"}])
     if not imgs:
         return {"status": "skipped_no_imgs", "n_copied": 0}
 
@@ -112,6 +113,7 @@ def stage_local_midjourney(src_dir: Path, dst_dir: Path, n: int, seed: int) -> d
 
 # -------- step 2: bitmind parquet download + extract --------
 
+
 def extract_bitmind_generator(
     gen: str,
     repo_id: str,
@@ -122,8 +124,8 @@ def extract_bitmind_generator(
 ) -> dict:
     """Download just enough parquets from HF to extract n_target images, save as resized JPGs."""
     try:
-        from huggingface_hub import HfApi, hf_hub_download
         import pyarrow.parquet as pq
+        from huggingface_hub import HfApi, hf_hub_download
     except ImportError as e:
         return {"status": "skipped_dep", "n_extracted": 0, "error": str(e)}
 
@@ -208,6 +210,7 @@ def extract_bitmind_generator(
 
 # -------- step 3: VisualNews -> per-generator nature --------
 
+
 def sample_visualnews_nature(
     vn_root: Path,
     dst_per_gen: dict[str, Path],
@@ -222,7 +225,9 @@ def sample_visualnews_nature(
     _log(f"VisualNews pool: {len(all_imgs)} JPGs found")
 
     if len(all_imgs) < n_per_gen * len(dst_per_gen):
-        _log(f"  WARNING: pool ({len(all_imgs)}) < needed ({n_per_gen * len(dst_per_gen)}); will reuse")
+        _log(
+            f"  WARNING: pool ({len(all_imgs)}) < needed ({n_per_gen * len(dst_per_gen)}); will reuse"
+        )
 
     rng = random.Random(seed)
     rng.shuffle(all_imgs)
@@ -253,17 +258,28 @@ def sample_visualnews_nature(
 
 # -------- main --------
 
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--out", type=Path, default=Path("data/raw/GenImage_v2"))
-    p.add_argument("--target-per-gen", type=int, default=1750,
-                   help="How many AI + nature samples per generator")
-    p.add_argument("--visualnews-root", type=Path,
-                   default=Path("data/raw/visualnews/origin"))
-    p.add_argument("--skip-bitmind", action="store_true",
-                   help="Skip bitmind downloads (use only midjourney local)")
-    p.add_argument("--only-gens", nargs="+", default=None,
-                   help="Subset of generators to process (default: all 6)")
+    p.add_argument(
+        "--target-per-gen",
+        type=int,
+        default=1750,
+        help="How many AI + nature samples per generator",
+    )
+    p.add_argument("--visualnews-root", type=Path, default=Path("data/raw/visualnews/origin"))
+    p.add_argument(
+        "--skip-bitmind",
+        action="store_true",
+        help="Skip bitmind downloads (use only midjourney local)",
+    )
+    p.add_argument(
+        "--only-gens",
+        nargs="+",
+        default=None,
+        help="Subset of generators to process (default: all 6)",
+    )
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
 
@@ -310,8 +326,10 @@ def main():
     _log("=== nature (VisualNews substitute) ===")
     dst_per_gen = {g: args.out / g / "nature" for g in gens_to_do}
     res = sample_visualnews_nature(
-        args.visualnews_root, dst_per_gen,
-        n_per_gen=args.target_per_gen, seed=args.seed + 1,
+        args.visualnews_root,
+        dst_per_gen,
+        n_per_gen=args.target_per_gen,
+        seed=args.seed + 1,
     )
     for gen, info in res.get("per_gen", {}).items():
         summary["generators"].setdefault(gen, {})["nature_source"] = "VisualNews"
@@ -327,7 +345,9 @@ def main():
 
     for gen in gens_to_do:
         g_info = summary["generators"].get(gen, {})
-        ai_n = g_info.get("ai_result", {}).get("n_extracted") or g_info.get("ai_result", {}).get("n_copied", 0)
+        ai_n = g_info.get("ai_result", {}).get("n_extracted") or g_info.get("ai_result", {}).get(
+            "n_copied", 0
+        )
         nat_n = g_info.get("nature_result", {}).get("n_copied", 0)
         _log(f"  {gen:11s} ai={ai_n}  nature={nat_n}")
 

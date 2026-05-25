@@ -5,6 +5,7 @@ Doctor's spec F.25 (MASTER_CHECKLIST):
           + 4 summary rows (Overall Avg, GAN Avg, Diffusion Avg, Std Dev).
     Cols: Generator | Type | AP | Accuracy | AUC.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -53,9 +54,7 @@ def render_eval_table(
     for g in ALL_GENERATORS:
         row = per_gen.get(g, {})
         if row.get("skipped"):
-            lines.append(
-                f"| {g} | {_gen_type(g)} | _skipped_ | _skipped_ | _skipped_ | 0 |"
-            )
+            lines.append(f"| {g} | {_gen_type(g)} | _skipped_ | _skipped_ | _skipped_ | 0 |")
             continue
         lines.append(
             f"| {g} | {_gen_type(g)} "
@@ -76,8 +75,7 @@ def render_eval_table(
         f"| {_fmt(oa['ap'])} | {_fmt(oa['accuracy'])} | {_fmt(oa['auc'])} | - |"
     )
     lines.append(
-        f"| **GAN Avg** | GAN "
-        f"| {_fmt(ga['ap'])} | {_fmt(ga['accuracy'])} | {_fmt(ga['auc'])} | - |"
+        f"| **GAN Avg** | GAN | {_fmt(ga['ap'])} | {_fmt(ga['accuracy'])} | {_fmt(ga['auc'])} | - |"
     )
     lines.append(
         f"| **Diffusion Avg** | Diffusion "

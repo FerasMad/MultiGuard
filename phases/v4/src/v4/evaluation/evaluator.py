@@ -1,4 +1,5 @@
 """BaseEvaluator - runs V3.1 section 7 eval on a trained model."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -46,6 +47,7 @@ class BaseEvaluator:
             if "source" in batch:
                 all_src.extend(batch["source"])
         import numpy as np
+
         return (
             np.concatenate(all_true),
             np.concatenate(all_pred),
@@ -74,6 +76,7 @@ class BaseEvaluator:
 
     def _per_source_breakdown(self, y_true, y_pred, sources, out_path: Path) -> None:
         import numpy as np
+
         srcs = np.asarray(sources)
         breakdown = {}
         for s in sorted(set(srcs)):

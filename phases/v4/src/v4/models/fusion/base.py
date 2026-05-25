@@ -1,10 +1,11 @@
 """FusionBase — the contract every fusion module must satisfy."""
+
 from __future__ import annotations
 
 from typing import ClassVar
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class FusionBase(nn.Module):
@@ -23,6 +24,7 @@ class FusionBase(nn.Module):
             Must contain at minimum: 'main_logits' [B, num_classes]
             May also contain:        'aux_logits' [B, 2], 'fused' [B, fused_dim]
     """
+
     name: ClassVar[str] = "_base"
     expected_inputs: ClassVar[tuple[str, ...]] = ()
 

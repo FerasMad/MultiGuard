@@ -3,6 +3,7 @@
 Configs are loaded from `configs/*.yaml` and validated against the schema
 defined here. Strict validation catches typos early (e.g. `feat_dim` vs `feat-dim`).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -19,7 +20,9 @@ class DataConfig:
     csv_path: str = ""
     cache_root: str = "cache/v4"
     feature_keys: list[dict] = field(default_factory=list)
-    splits: dict[str, str] = field(default_factory=lambda: {"train": "train", "val": "val", "test": "test"})
+    splits: dict[str, str] = field(
+        default_factory=lambda: {"train": "train", "val": "val", "test": "test"}
+    )
 
 
 @dataclass
@@ -60,6 +63,7 @@ class TrainConfig:
 @dataclass
 class V4Config:
     """Top-level config — the in-memory form of a YAML file."""
+
     seed: int = 42
     deterministic: bool = False
     data: dict = field(default_factory=dict)

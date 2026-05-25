@@ -1,4 +1,5 @@
 """LR scheduler builder per V3.1 section 5.5: StepLR decay 0.1 at epoch 30."""
+
 from __future__ import annotations
 
 import torch

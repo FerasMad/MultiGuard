@@ -25,6 +25,7 @@ Implementation note (deviation D5 from locked decisions register):
 Z-score normalization (using dct_stats.json) is NOT applied here. That is the
 dataset loader's responsibility (see forensic.data.dct_dataset.DctCacheDataset).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -36,9 +37,9 @@ from scipy.fft import dctn
 
 # Locked constants (doctor's spec)
 IMG_SIZE: int = 224
-PATCH_A: int = 8          # Set A patch size (28x28 = 784 patches)
-PATCH_B: int = 16         # Set B patch size (14x14 = 196 patches)
-LOG_EPS: float = 1e-8     # log offset to avoid log(0)
+PATCH_A: int = 8  # Set A patch size (28x28 = 784 patches)
+PATCH_B: int = 16  # Set B patch size (14x14 = 196 patches)
+LOG_EPS: float = 1e-8  # log offset to avoid log(0)
 
 
 def _to_y_channel(img: Image.Image) -> np.ndarray:
@@ -124,8 +125,8 @@ def compute_dual_dct(image_source: str | Path | np.ndarray | Image.Image) -> tor
 
 __all__ = [
     "IMG_SIZE",
+    "LOG_EPS",
     "PATCH_A",
     "PATCH_B",
-    "LOG_EPS",
     "compute_dual_dct",
 ]

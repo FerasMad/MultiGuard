@@ -16,6 +16,7 @@ Post-unification layout (P2.5):
         ├── src/v4/                      <- V4 package source
         └── configs/                     <- CONFIGS_ROOT (V4-specific configs)
 """
+
 from __future__ import annotations
 
 import os

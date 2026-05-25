@@ -32,8 +32,8 @@ jobs:
 
       - name: Lint with ruff
         run: |
-          ruff check src/ tests/ app/ scripts/
-          ruff format --check src/ tests/ app/ scripts/
+          ruff check phases/v4/src/ phases/v4/tests/ phases/forensic/src/ phases/forensic/tests/ phases/forensic/scripts/ app/ scripts/
+          ruff format --check phases/v4/src/ phases/v4/tests/ phases/forensic/src/ phases/forensic/tests/ phases/forensic/scripts/ app/ scripts/
 
       - name: Install minimal deps for import smoke
         run: |
@@ -44,5 +44,5 @@ jobs:
 
       - name: Smoke imports (CPU)
         run: |
-          pytest tests/smoke/ -v --tb=short || \
+          pytest phases/v4/tests/smoke/ -v --tb=short || \
             echo "::warning::Smoke tests require torch; install gpu extras locally for full coverage."

@@ -16,6 +16,7 @@ Z-score is applied at load time by DctCacheDataset using dct_stats.json
 Multiprocess: uses Pool with spawn start method to keep scipy.fft isolated
 from torch CUDA (per Risk R2 mitigation in plan).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,7 +34,8 @@ def _process_one(args: tuple[str, str]) -> tuple[str, bool, str]:
     img_path, out_path = args
     # Import inside worker so scipy/numpy don't get initialized in parent
     # (parent may have torch CUDA active).
-    from forensic.preprocessing.dual_dct import compute_dual_dct  # noqa: PLC0415
+    from forensic.preprocessing.dual_dct import compute_dual_dct
+
     try:
         out_p = Path(out_path)
         if out_p.exists():
@@ -102,7 +104,9 @@ def precompute_split(
                 pct = 100.0 * (i + 1) / len(jobs)
                 elapsed = time.time() - t0
                 rate = (i + 1) / max(elapsed, 1e-3)
-                _safe_log(f"  progress: {i+1}/{len(jobs)} ({pct:.1f}%) at {rate:.1f}/s, fails={fail_count}")
+                _safe_log(
+                    f"  progress: {i + 1}/{len(jobs)} ({pct:.1f}%) at {rate:.1f}/s, fails={fail_count}"
+                )
 
     elapsed = time.time() - t0
     return {
@@ -120,12 +124,9 @@ def precompute_split(
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--train-src", type=Path,
-                   default=Path("phases/forensic/data/genimage_train"))
-    p.add_argument("--test-src", type=Path,
-                   default=Path("phases/forensic/data/genimage_test"))
-    p.add_argument("--out-root", type=Path,
-                   default=Path("phases/forensic/data/dct_cache"))
+    p.add_argument("--train-src", type=Path, default=Path("phases/forensic/data/genimage_train"))
+    p.add_argument("--test-src", type=Path, default=Path("phases/forensic/data/genimage_test"))
+    p.add_argument("--out-root", type=Path, default=Path("phases/forensic/data/dct_cache"))
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--splits", nargs="+", default=["train", "val", "test"])
     args = p.parse_args()
@@ -160,8 +161,10 @@ def main():
     _safe_log(f"\nDONE. Summary at {summary_path}")
 
     for split, info in summary["splits"].items():
-        _safe_log(f"  {split}: {info.get('ok',0)} ok, {info.get('fail',0)} fail "
-                  f"({info.get('elapsed_s',0):.0f}s)")
+        _safe_log(
+            f"  {split}: {info.get('ok', 0)} ok, {info.get('fail', 0)} fail "
+            f"({info.get('elapsed_s', 0):.0f}s)"
+        )
 
     if any(info.get("fail", 0) > 0 for info in summary["splits"].values()):
         sys.exit(1)

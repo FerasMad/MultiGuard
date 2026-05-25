@@ -6,6 +6,7 @@ Usage::
     log = get_logger(__name__)
     log.info("Stage 1 training started")
 """
+
 from __future__ import annotations
 
 import logging

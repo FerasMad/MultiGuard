@@ -11,6 +11,7 @@ Doctor's spec F.12-F.22 (MASTER_CHECKLIST):
 Locked decision D6: fp32 for forensic training (safer with fresh 1ch conv1).
 Locked decision D7: batch 64 per doctor spec.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,19 +38,18 @@ def seed_all(seed: int) -> None:
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--config", type=Path,
-                   default=Path("phases/forensic/configs/dct_resnet50.yaml"))
-    p.add_argument("--cache-train", type=Path,
-                   default=Path("phases/forensic/data/dct_cache/train"))
-    p.add_argument("--cache-val", type=Path,
-                   default=Path("phases/forensic/data/dct_cache/val"))
-    p.add_argument("--dct-stats", type=Path,
-                   default=Path("phases/forensic/data/dct_stats.json"))
-    p.add_argument("--out-dir", type=Path,
-                   default=Path("phases/forensic/outputs/dct"))
+    p.add_argument("--config", type=Path, default=Path("phases/forensic/configs/dct_resnet50.yaml"))
+    p.add_argument("--cache-train", type=Path, default=Path("phases/forensic/data/dct_cache/train"))
+    p.add_argument("--cache-val", type=Path, default=Path("phases/forensic/data/dct_cache/val"))
+    p.add_argument("--dct-stats", type=Path, default=Path("phases/forensic/data/dct_stats.json"))
+    p.add_argument("--out-dir", type=Path, default=Path("phases/forensic/outputs/dct"))
     p.add_argument("--epochs", type=int, default=None, help="Override config max_epochs")
-    p.add_argument("--limit-batches", type=int, default=None,
-                   help="Smoke test: cap dataset to this many samples")
+    p.add_argument(
+        "--limit-batches",
+        type=int,
+        default=None,
+        help="Smoke test: cap dataset to this many samples",
+    )
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
 
@@ -75,12 +75,19 @@ def main():
 
     pin = torch.cuda.is_available()
     train_loader = DataLoader(
-        train_ds, batch_size=batch_size, shuffle=True,
-        num_workers=num_workers, pin_memory=pin, drop_last=False,
+        train_ds,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=pin,
+        drop_last=False,
     )
     val_loader = DataLoader(
-        val_ds, batch_size=batch_size, shuffle=False,
-        num_workers=num_workers, pin_memory=pin,
+        val_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin,
     )
 
     model = build_dct_resnet50(pretrained=True)
@@ -96,13 +103,19 @@ def main():
     result = trainer.fit()
 
     summary_path = args.out_dir / "train_summary.json"
-    summary_path.write_text(json.dumps({
-        "config_path": str(args.config),
-        "seed": args.seed,
-        "train_n": len(train_ds),
-        "val_n": len(val_ds),
-        **result,
-    }, indent=2, default=str))
+    summary_path.write_text(
+        json.dumps(
+            {
+                "config_path": str(args.config),
+                "seed": args.seed,
+                "train_n": len(train_ds),
+                "val_n": len(val_ds),
+                **result,
+            },
+            indent=2,
+            default=str,
+        )
+    )
     print(f"\n[train_dct] DONE.  best_ap={result['best_ap']:.4f} at epoch {result['best_epoch']}")
     print(f"[train_dct] checkpoint: {result['forensic_named_ckpt']}")
 

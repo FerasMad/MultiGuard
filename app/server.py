@@ -1,4 +1,5 @@
 """MultiGuard V4 FastAPI server - registry-driven, V3.1-spec compliant."""
+
 from __future__ import annotations
 
 import io
@@ -63,8 +64,10 @@ def _load_server() -> dict:
 _state: dict = {}
 app = FastAPI(title="MultiGuard V4")
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"],
-    allow_methods=["*"], allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -125,32 +128,34 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)) -> JSONR
         confidence = round(float(probs[pred]) * 100, 1)
 
         prob_dict = {
-            "Real":             round(float(probs[0]), 4),
-            "Out-of-Context":   round(float(probs[1]), 4),
-            "Manipulated":      round(float(probs[2]), 4),
-            "AI-Text":          round(float(probs[3]), 4),
+            "Real": round(float(probs[0]), 4),
+            "Out-of-Context": round(float(probs[1]), 4),
+            "Manipulated": round(float(probs[2]), 4),
+            "AI-Text": round(float(probs[3]), 4),
             "Fully-Fabricated": round(float(probs[4]), 4),
         }
         text_ai = float(probs[3]) + float(probs[4])
         image_manip = float(probs[2]) + float(probs[4])
         modules = {
-            "text_ai":       round(text_ai, 2),
+            "text_ai": round(text_ai, 2),
             "text_patterns": round(min(1.0, 0.5 * text_ai + 0.5 * float(probs[1])), 2),
-            "image_manip":   round(image_manip, 2),
-            "cross_modal":   round(float(probs[1]), 2),
-            "overall":       round(1.0 - float(probs[0]), 2),
+            "image_manip": round(image_manip, 2),
+            "cross_modal": round(float(probs[1]), 2),
+            "overall": round(1.0 - float(probs[0]), 2),
         }
 
-        return JSONResponse({
-            "verdict": LABELS[pred],
-            "verdict_ar": LABELS_AR[pred],
-            "confidence": confidence,
-            "label_index": pred,
-            "probabilities": prob_dict,
-            "modules": modules,
-            "explanation": EXPLANATIONS_EN[pred],
-            "explanation_ar": EXPLANATIONS_AR[pred],
-        })
+        return JSONResponse(
+            {
+                "verdict": LABELS[pred],
+                "verdict_ar": LABELS_AR[pred],
+                "confidence": confidence,
+                "label_index": pred,
+                "probabilities": prob_dict,
+                "modules": modules,
+                "explanation": EXPLANATIONS_EN[pred],
+                "explanation_ar": EXPLANATIONS_AR[pred],
+            }
+        )
     except Exception as e:
         log.exception("analyze failed")
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -163,4 +168,5 @@ if _static_dir.exists():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8081, log_level="info")

@@ -13,6 +13,7 @@ Writes:
   - phases/forensic/REPORT.md  (full doctor-facing handoff)
   - phases/forensic/REPORT.docx (optional; only if pandoc is on PATH)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -67,7 +68,11 @@ def main():
     eval_json = _read_json(root / "phases/forensic/outputs/eval_dct.json")
     history = _read_csv_rows(root / "phases/forensic/outputs/dct/training_history.csv")
     eval_table_path = root / "phases/forensic/outputs/eval_table.md"
-    eval_table_md = eval_table_path.read_text(encoding="utf-8") if eval_table_path.exists() else "_eval_table.md not yet generated_"
+    eval_table_md = (
+        eval_table_path.read_text(encoding="utf-8")
+        if eval_table_path.exists()
+        else "_eval_table.md not yet generated_"
+    )
 
     # ---- gather numbers for in-text use ----
     best_ap = train_summary.get("best_ap")
@@ -126,14 +131,24 @@ def main():
     lines.append("| F.25 | Eval table format | OK (see Sec. 6) |")
     lines.append("| F.26 | eval mode + no_grad + sigmoid | OK |")
     lines.append("")
-    lines.append("Unit test `tests/test_two_phase_trainer.py` enforces the 4 invariants at the Phase 1->2 boundary (optimizer reinit, scheduler reinit, num_bad_epochs reset, grad-clip activation). All 12 unit tests pass.\n")
+    lines.append(
+        "Unit test `tests/test_two_phase_trainer.py` enforces the 4 invariants at the Phase 1->2 boundary (optimizer reinit, scheduler reinit, num_bad_epochs reset, grad-clip activation). All 12 unit tests pass.\n"
+    )
     lines.append("\n## 3. Deviations from spec\n")
     lines.append("Three documented deviations (full reasoning in `docs/DECISIONS.md`, F-series):\n")
-    lines.append("- **F-A3 (real-class source):** spec F.3 says real = ImageNet \"nature\" (bundled per-generator in the original GenImage Drive release). ImageNet is not on disk on the FSOS PC, so we substituted **VisualNews** (71,966 real news photos). The model still learns real-vs-AI, but the real distribution is news photography rather than ImageNet's natural scenes. To validate, one could later swap in the canonical GenImage `nature/` subset and rerun eval.\n")
-    lines.append(f"- **F-A2 (missing generators):** {len(missing_gens)} of 8 generators are excluded from this build: `{', '.join(missing_gens)}`. Reason: {missing_reason}. The eval table marks those rows as `_skipped_`.\n")
-    lines.append("- **F-A1 (Approach 1 deferred):** the RGB+Fourier-mask approach (`chandlerbing65nm/FakeImageDetection`) is not in this build. It needs a Linux-only training shell and manual Google Drive download. Planned as a follow-up.\n")
+    lines.append(
+        '- **F-A3 (real-class source):** spec F.3 says real = ImageNet "nature" (bundled per-generator in the original GenImage Drive release). ImageNet is not on disk on the FSOS PC, so we substituted **VisualNews** (71,966 real news photos). The model still learns real-vs-AI, but the real distribution is news photography rather than ImageNet\'s natural scenes. To validate, one could later swap in the canonical GenImage `nature/` subset and rerun eval.\n'
+    )
+    lines.append(
+        f"- **F-A2 (missing generators):** {len(missing_gens)} of 8 generators are excluded from this build: `{', '.join(missing_gens)}`. Reason: {missing_reason}. The eval table marks those rows as `_skipped_`.\n"
+    )
+    lines.append(
+        "- **F-A1 (Approach 1 deferred):** the RGB+Fourier-mask approach (`chandlerbing65nm/FakeImageDetection`) is not in this build. It needs a Linux-only training shell and manual Google Drive download. Planned as a follow-up.\n"
+    )
     lines.append("\n## 4. Dataset\n")
-    lines.append("Per generator targets: 1750 AI + 1750 nature -> `build_splits.py` allocates 1000 train + 250 val + 500 test per class. With 6 generators present, totals are:\n")
+    lines.append(
+        "Per generator targets: 1750 AI + 1750 nature -> `build_splits.py` allocates 1000 train + 250 val + 500 test per class. With 6 generators present, totals are:\n"
+    )
     lines.append(
         f"- **Train:** {splits.get('totals', {}).get('train_real', '?')} real / "
         f"{splits.get('totals', {}).get('train_fake', '?')} fake "
@@ -151,11 +166,15 @@ def main():
         nat_n = g_info.get("nature_result", {}).get("n_copied", 0)
         lines.append(f"- `{g}`: AI from `{ai_src}` (n={ai_n}), nature from `{nat_src}` (n={nat_n})")
     lines.append("")
-    lines.append("**DCT z-score statistics** (computed via Welford streaming over train split only, per spec F.17):\n")
+    lines.append(
+        "**DCT z-score statistics** (computed via Welford streaming over train split only, per spec F.17):\n"
+    )
     lines.append(f"- mean = `{_fmt_optional(dct_stats.get('mean'), 6)}`")
     lines.append(f"- std  = `{_fmt_optional(dct_stats.get('std'), 6)}`")
-    lines.append(f"- n_scalars accumulated = `{dct_stats.get('n_scalars', 'n/a')}` "
-                 f"from `{dct_stats.get('n_files', 'n/a')}` .pt files.\n")
+    lines.append(
+        f"- n_scalars accumulated = `{dct_stats.get('n_scalars', 'n/a')}` "
+        f"from `{dct_stats.get('n_files', 'n/a')}` .pt files.\n"
+    )
     lines.append("\n## 5. Training results\n")
     lines.append(
         f"- **Best val AP:** `{_fmt_optional(best_ap)}` at epoch `{best_epoch}` "
@@ -167,23 +186,29 @@ def main():
     )
     if history:
         lines.append("\n### Training history (per epoch)\n")
-        lines.append("| epoch | phase | train_loss | val_ap | val_acc | lr | patience_left | best |")
+        lines.append(
+            "| epoch | phase | train_loss | val_ap | val_acc | lr | patience_left | best |"
+        )
         lines.append("|-------|-------|------------|--------|---------|----|--------------|----|")
         for r in history[:30]:
             star = "*" if r.get("is_best") == "1" else ""
             lines.append(
-                f"| {r.get('epoch','?')} | {r.get('phase','?')} | {r.get('train_loss','?')} "
-                f"| {r.get('val_ap','?')} | {r.get('val_acc','?')} | {r.get('lr','?')} "
-                f"| {r.get('patience_left','?')} | {star} |"
+                f"| {r.get('epoch', '?')} | {r.get('phase', '?')} | {r.get('train_loss', '?')} "
+                f"| {r.get('val_ap', '?')} | {r.get('val_acc', '?')} | {r.get('lr', '?')} "
+                f"| {r.get('patience_left', '?')} | {star} |"
             )
         lines.append("")
     lines.append("\n## 6. Per-generator evaluation\n")
-    lines.append("(Reproduces doctor's F.25 table format; sklearn metrics; threshold 0.5 for accuracy.)\n")
+    lines.append(
+        "(Reproduces doctor's F.25 table format; sklearn metrics; threshold 0.5 for accuracy.)\n"
+    )
     lines.append(eval_table_md.strip() + "\n")
-    lines.append(f"\nSummary aggregates: **Overall AP = {_fmt_optional(overall.get('ap'))}**, "
-                 f"Diffusion-avg AP = {_fmt_optional(diff.get('ap'))}, "
-                 f"GAN-avg AP = {_fmt_optional(gan.get('ap'))}, "
-                 f"StdDev AP = {_fmt_optional(std_ap)}.\n")
+    lines.append(
+        f"\nSummary aggregates: **Overall AP = {_fmt_optional(overall.get('ap'))}**, "
+        f"Diffusion-avg AP = {_fmt_optional(diff.get('ap'))}, "
+        f"GAN-avg AP = {_fmt_optional(gan.get('ap'))}, "
+        f"StdDev AP = {_fmt_optional(std_ap)}.\n"
+    )
     lines.append("\n## 7. Discussion\n")
     lines.append(
         "- The detector reaches its best validation AP on the 6 available generators, "
@@ -194,9 +219,9 @@ def main():
         "variance; high std-dev across generators is expected with the spec's small "
         "per-class scale.\n"
         "- **Caveat on real-class:** because the real class is VisualNews (news photos), "
-        "the model may have learned a partial \"news-photo vs AI-image\" cue alongside "
+        'the model may have learned a partial "news-photo vs AI-image" cue alongside '
         "the intended forensic-frequency cue. The DCT-domain input shouldn't expose "
-        "obvious content cues, but this should be re-validated when ImageNet \"nature\" "
+        'obvious content cues, but this should be re-validated when ImageNet "nature" '
         "becomes available.\n"
     )
     lines.append("\n## 8. Reproducibility\n")
@@ -233,7 +258,7 @@ def main():
     lines.append(
         "- **Acquire SD v1.4 / SD v1.5 fake samples** from a mirror that exposes JPGs "
         "(community HF repos like `JourneyDB` or similar may work).\n"
-        "- **Swap real-class to ImageNet \"nature\"** (re-download from GenImage Drive, "
+        '- **Swap real-class to ImageNet "nature"** (re-download from GenImage Drive, '
         "re-run from step 1) once that data is staged.\n"
         "- **Approach 1 (RGB + Fourier mask)** - clone `chandlerbing65nm/FakeImageDetection`, "
         "download the `mask_15/rn50ft_fouriermask.pth` checkpoint, run the adapted "
@@ -245,7 +270,9 @@ def main():
         "should improve.\n"
     )
     lines.append("\n---\n")
-    lines.append("_Generated automatically by `phases/forensic/scripts/build_handoff_report.py` from on-disk artifacts._\n")
+    lines.append(
+        "_Generated automatically by `phases/forensic/scripts/build_handoff_report.py` from on-disk artifacts._\n"
+    )
 
     args.out_md.parent.mkdir(parents=True, exist_ok=True)
     args.out_md.write_text("\n".join(lines), encoding="utf-8")

@@ -5,6 +5,7 @@ Modalities:
   v_semantic_fnd - FND-CLIP semantic [768]            GPU
   v_textfor_qwen - Qwen2-7B last hidden mean [3584]   GPU
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -62,10 +63,12 @@ def _precompute_dct(df: pd.DataFrame, out_dir: Path) -> None:
             log.warning("DCT fail %s: %s", sid, e)
 
 
-def _precompute_semantic(df: pd.DataFrame, out_dir: Path, config_path: str | None,
-                         device: torch.device) -> None:
+def _precompute_semantic(
+    df: pd.DataFrame, out_dir: Path, config_path: str | None, device: torch.device
+) -> None:
     import yaml
     from PIL import Image
+
     from v4.data.preprocessing.tokenizers import prepare_fnd_inputs
 
     if not config_path:
@@ -93,8 +96,9 @@ def _precompute_semantic(df: pd.DataFrame, out_dir: Path, config_path: str | Non
             log.warning("FND-CLIP fail %s: %s", sid, e)
 
 
-def _precompute_qwen(df: pd.DataFrame, out_dir: Path, config_path: str | None,
-                    device: torch.device) -> None:
+def _precompute_qwen(
+    df: pd.DataFrame, out_dir: Path, config_path: str | None, device: torch.device
+) -> None:
     import yaml
 
     if not config_path:

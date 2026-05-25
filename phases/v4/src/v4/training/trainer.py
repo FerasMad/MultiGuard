@@ -4,14 +4,15 @@ Per V3.1 section 5.5: AdamW lr=1e-4 wd=1e-4 batch=64, StepLR x0.1 at epoch 30,
 Early stopping patience 10 on val F1-macro, gradient clip max_norm=1.0,
 bf16 mixed precision (dual 4090).
 """
+
 from __future__ import annotations
 
 import time
 from pathlib import Path
 
 import torch
-import torch.nn as nn
 from sklearn.metrics import f1_score
+from torch import nn
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
@@ -58,8 +59,11 @@ class BaseTrainer:
         if loss_terms is None:
             loss_terms = [
                 {"type": "ce", "target": "main_logits", "weight": 1.0},
-                {"type": "bce", "target": "aux_logits",
-                 "weight": float(train_cfg.get("aux_weight", 0.1))},
+                {
+                    "type": "bce",
+                    "target": "aux_logits",
+                    "weight": float(train_cfg.get("aux_weight", 0.1)),
+                },
             ]
         self.loss_fn = build_loss(loss_terms)
 
@@ -161,8 +165,12 @@ class BaseTrainer:
             elapsed = time.time() - t0
             log.info(
                 "ep %d | lr=%.2e | train_loss=%.4f | val_loss=%.4f | val_f1_macro=%.4f | %.1fs",
-                epoch, lr, train_m["train_loss"], val_m["val_loss"],
-                val_m["f1_macro"], elapsed,
+                epoch,
+                lr,
+                train_m["train_loss"],
+                val_m["val_loss"],
+                val_m["f1_macro"],
+                elapsed,
             )
             history.append({"epoch": epoch, **train_m, **val_m, "lr": lr, "seconds": elapsed})
 
@@ -194,10 +202,10 @@ class BaseTrainer:
             else:
                 patience_left -= 1
                 if patience_left <= 0:
-                    log.info("early stop at ep %d (best=%.4f at ep %d)",
-                             epoch, best_f1, best_epoch)
+                    log.info("early stop at ep %d (best=%.4f at ep %d)", epoch, best_f1, best_epoch)
                     break
 
         import pandas as pd
+
         pd.DataFrame(history).to_csv(self.out_dir / "training_history.csv", index=False)
         return {"best_f1_macro": best_f1, "best_epoch": best_epoch, "history": history}

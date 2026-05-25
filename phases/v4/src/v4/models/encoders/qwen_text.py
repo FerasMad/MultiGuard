@@ -19,10 +19,11 @@ Note: For runtime inference (server use), we use the `runtime_forward` variant
 that takes raw text -> tokenize -> Qwen forward -> masked-mean -> proj. For
 training, we read precomputed [B, 3584] vectors from cache (much faster).
 """
+
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from v4.core.logging import get_logger
 from v4.core.registry import ENCODER_REGISTRY, register
@@ -51,17 +52,17 @@ class TextForensicProjection(nn.Module):
 class Qwen2TextEncoder(EncoderBase):
     """Qwen2-7B-Instruct text-forensic encoder + projection per V3.1 §4."""
 
-    required_inputs = ("v_textfor_qwen",)   # cache key for precomputed Qwen hidden
+    required_inputs = ("v_textfor_qwen",)  # cache key for precomputed Qwen hidden
     modality = "text"
 
     def __init__(
         self,
         model_name: str = "Qwen/Qwen2-7B-Instruct",
-        hidden_size: int = 3584,   # F2: 7B = 3584 (spec was 4096 for Qwen1.5-7B)
-        layer_index: int = -1,      # F2: 7B has 28 layers; last is closest to spec's "layer 30"
+        hidden_size: int = 3584,  # F2: 7B = 3584 (spec was 4096 for Qwen1.5-7B)
+        layer_index: int = -1,  # F2: 7B has 28 layers; last is closest to spec's "layer 30"
         max_length: int = 512,
         output_dim: int = 768,
-        load_backbone: bool = False,    # False during cached-feature training; True at inference
+        load_backbone: bool = False,  # False during cached-feature training; True at inference
         gpu_mem_gib: int = 10,
         **_kwargs,
     ):
@@ -86,8 +87,9 @@ class Qwen2TextEncoder(EncoderBase):
         """Load Qwen2-7B-Instruct weights into memory (heavy, ~15 GB)."""
         from transformers import AutoModelForCausalLM
 
-        log.info("Loading Qwen2-7B-Instruct (fp16 + device_map=auto, GPU cap %d GiB)",
-                 self.gpu_mem_gib)
+        log.info(
+            "Loading Qwen2-7B-Instruct (fp16 + device_map=auto, GPU cap %d GiB)", self.gpu_mem_gib
+        )
         self._tokenizer = get_qwen_tokenizer(self.model_name)
         self._qwen = AutoModelForCausalLM.from_pretrained(
             self.model_name,
@@ -99,8 +101,11 @@ class Qwen2TextEncoder(EncoderBase):
         self._qwen.eval()
         for p in self._qwen.parameters():
             p.requires_grad = False
-        log.info("Qwen loaded: hidden_size=%d, num_hidden_layers=%d",
-                 self._qwen.config.hidden_size, self._qwen.config.num_hidden_layers)
+        log.info(
+            "Qwen loaded: hidden_size=%d, num_hidden_layers=%d",
+            self._qwen.config.hidden_size,
+            self._qwen.config.num_hidden_layers,
+        )
 
     @torch.no_grad()
     def encode_text(self, text: str | list[str]) -> torch.Tensor:
@@ -113,14 +118,17 @@ class Qwen2TextEncoder(EncoderBase):
         if isinstance(text, str):
             text = [text]
         enc = self._tokenizer(
-            text, return_tensors="pt",
-            padding=True, truncation=True, max_length=self.max_length,
+            text,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
         )
         # accelerate device_map='auto' accepts cuda:0 inputs and routes internally
         device = next(self._qwen.parameters()).device
         enc = {k: v.to(device) for k, v in enc.items()}
         out = self._qwen(**enc, output_hidden_states=True)
-        h = out.hidden_states[self.layer_index]    # [B, S, H], fp16
+        h = out.hidden_states[self.layer_index]  # [B, S, H], fp16
         pooled = masked_mean_pool(h.float(), enc["attention_mask"])  # [B, H], fp32
         return pooled
 
