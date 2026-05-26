@@ -34,9 +34,7 @@ from models.full_pipeline import (  # noqa: E402
 )
 
 
-# ---------------------------------------------------------------------------
 # Step 1: forensic encoder + baseline
-# ---------------------------------------------------------------------------
 
 
 def test_resnet18_forensic_accepts_1_channel_dct():
@@ -78,9 +76,7 @@ def test_forensic_baseline_gradients_flow():
     assert len(grads) > 0
 
 
-# ---------------------------------------------------------------------------
 # Step 2 components: cross-attention + MLP head
-# ---------------------------------------------------------------------------
 
 
 def test_cross_attention_concat_to_1024():
@@ -125,9 +121,7 @@ def test_mlp_classifier_layout_matches_spec():
     assert not torch.allclose(sums, torch.ones_like(sums), atol=1e-3)
 
 
-# ---------------------------------------------------------------------------
 # Step 2: full pipeline
-# ---------------------------------------------------------------------------
 
 
 class _StubFND(nn.Module):

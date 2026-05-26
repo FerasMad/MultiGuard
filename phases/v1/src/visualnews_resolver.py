@@ -94,9 +94,7 @@ class VisualNewsResolver:
                         f,
                     )
 
-    # ------------------------------------------------------------------
     # public API
-    # ------------------------------------------------------------------
 
     def __len__(self) -> int:
         return len(self._index)
@@ -136,9 +134,7 @@ class VisualNewsResolver:
         found = sum(1 for i in ids if i in self._index)
         return found, len(ids)
 
-    # ------------------------------------------------------------------
     # internals
-    # ------------------------------------------------------------------
 
     def _build_index_from_tarball(self) -> dict[int, tuple[str, int]]:
         """Open articles.tar.gz, load every processed_*.p pickle, build the

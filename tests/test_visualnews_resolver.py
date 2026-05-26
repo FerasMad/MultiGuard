@@ -52,9 +52,7 @@ def fake_articles(tmp_path: Path) -> Path:
     return out
 
 
-# ---------------------------------------------------------------------------
 # core behaviour
-# ---------------------------------------------------------------------------
 
 
 def test_index_size_and_contains(fake_articles: Path):
@@ -103,9 +101,7 @@ def test_coverage(fake_articles: Path):
     assert (found, total) == (2, 4)
 
 
-# ---------------------------------------------------------------------------
 # bbc_1 + bbc_2 both map to bbc/
-# ---------------------------------------------------------------------------
 
 
 def test_bbc_1_and_bbc_2_share_bbc_folder(tmp_path: Path):
@@ -129,9 +125,7 @@ def test_bbc_1_and_bbc_2_share_bbc_folder(tmp_path: Path):
     assert r.path_for(2).parts[1] == "bbc"
 
 
-# ---------------------------------------------------------------------------
 # index cache
-# ---------------------------------------------------------------------------
 
 
 def test_index_cache_roundtrip(fake_articles: Path):
@@ -150,9 +144,7 @@ def test_index_cache_roundtrip(fake_articles: Path):
     assert len(r2) == len(r1)
 
 
-# ---------------------------------------------------------------------------
 # error paths
-# ---------------------------------------------------------------------------
 
 
 def test_missing_articles_raises(tmp_path: Path):

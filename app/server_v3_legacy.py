@@ -44,9 +44,7 @@ from torch import nn
 from torchvision import transforms
 from transformers import AutoModelForCausalLM, AutoTokenizer, BertTokenizer, CLIPProcessor
 
-# ---------------------------------------------------------------------------
 # Path setup
-# ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from models.fnd_clip import FNDCLIP  # noqa: E402
@@ -54,9 +52,7 @@ from models.text_fluoroscopy import TextForensicProjection, masked_mean_pool  # 
 from models.univfd_encoder import UnivFDEncoder  # noqa: E402
 from models.v3_pipeline import V3FusionModule  # noqa: E402
 
-# ---------------------------------------------------------------------------
 # Config
-# ---------------------------------------------------------------------------
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 NUM_CLASSES = 5
 V3_CKPT = ROOT / "v3" / "outputs" / "v3_pipeline_qwen" / "best.pt"
@@ -82,9 +78,7 @@ LABEL_NAMES = {
 }
 LABEL_NAMES_AR = {0: "حقيقي", 1: "خارج السياق", 2: "معدَّل", 3: "نص مولَّد", 4: "ملفَّق بالكامل"}
 
-# ---------------------------------------------------------------------------
 # Model loading (runs once at startup)
-# ---------------------------------------------------------------------------
 print(f"[startup] device={DEVICE}, num_classes={NUM_CLASSES}", flush=True)
 
 print(f"[startup] loading FND-CLIP from {FND_CKPT.name} ...", flush=True)
@@ -215,9 +209,7 @@ image_tf = transforms.Compose(
 
 print("[startup] all models loaded.", flush=True)
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 
 def _patch_dct(y: np.ndarray, patch_size: int = DCT_PATCH) -> np.ndarray:
@@ -297,9 +289,7 @@ def encode_text_qwen(text: str) -> torch.Tensor:
     return pooled.to(DEVICE)
 
 
-# ---------------------------------------------------------------------------
 # FastAPI app
-# ---------------------------------------------------------------------------
 app = FastAPI(title="MultiGuard")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -343,16 +333,16 @@ EXPLANATIONS_AR = {
 async def analyze(text: str = Form(...), image: UploadFile = File(...)):
     """Run the V3 5-class pipeline on a text+image pair."""
     try:
-        # ---- 1. Decode image ----
+        # 1. Decode image
         img_bytes = await image.read()
         pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
-        # ---- 2. Build inputs for each stream ----
+        # 2. Build inputs for each stream
         fnd_in = prepare_fnd_inputs(text, pil_img)
         dct_map = compute_patch_dct_from_pil(pil_img)  # [1, 224, 224]
         dct_batch = dct_map.unsqueeze(0).to(DEVICE)  # [1, 1, 224, 224]
 
-        # ---- 3. Run all three encoders + fusion ----
+        # 3. Run all three encoders + fusion
         with torch.no_grad():
             # 3a. FND-CLIP -> v_semantic [1, 512]
             v_semantic = fnd_clip.forward_semantic(
@@ -373,7 +363,7 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)):
             v_txt768 = text_proj(v_textfor)
             out = v3_fusion(v_sem768, v_imgfor, v_txt768)
 
-        # ---- 4. Probabilities ----
+        # 4. Probabilities
         main_logits = out["main_logits"][0]  # [5]
         aux_logits = out["aux_logits"][0]  # [2]
         probs = F.softmax(main_logits, dim=0).cpu().tolist()

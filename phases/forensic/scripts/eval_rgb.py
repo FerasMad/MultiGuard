@@ -16,7 +16,7 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-# --- import FakeImageDetection model ----------------------------------------
+# import FakeImageDetection model
 EXTERNAL_ROOT = Path("phases/forensic/external/FakeImageDetection")
 if not EXTERNAL_ROOT.exists():
     print(f"FATAL: {EXTERNAL_ROOT} not found.", file=sys.stderr)

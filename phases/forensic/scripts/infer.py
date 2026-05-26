@@ -25,7 +25,7 @@ import torch
 from PIL import Image
 from torchvision import transforms
 
-# --- Approach 2 (DCT) -----------------------------------------------------
+# Approach 2 (DCT)
 
 
 def _build_dct(ckpt: Path):
@@ -58,7 +58,7 @@ def _build_dct(ckpt: Path):
     return model, _preprocess
 
 
-# --- Approach 1 (RGB + Fourier) ------------------------------------------
+# Approach 1 (RGB + Fourier)
 
 
 def _build_rgb(ckpt: Path):
@@ -97,7 +97,7 @@ def _build_rgb(ckpt: Path):
     return model, _preprocess
 
 
-# --- main -----------------------------------------------------------------
+# main
 
 
 def main():

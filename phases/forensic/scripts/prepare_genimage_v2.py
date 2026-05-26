@@ -79,7 +79,7 @@ def _log(msg: str) -> None:
     print(f"[prepare_v2] {msg}", flush=True)
 
 
-# -------- step 1: midjourney from local --------
+# step 1: midjourney from local
 
 
 def stage_local_midjourney(src_dir: Path, dst_dir: Path, n: int, seed: int) -> dict:
@@ -111,7 +111,7 @@ def stage_local_midjourney(src_dir: Path, dst_dir: Path, n: int, seed: int) -> d
     return {"status": "ok", "n_copied": n_ok, "n_available": len(imgs)}
 
 
-# -------- step 2: bitmind parquet download + extract --------
+# step 2: bitmind parquet download + extract
 
 
 def extract_bitmind_generator(
@@ -256,7 +256,7 @@ def sample_visualnews_nature(
     return {"status": "ok", "per_gen": out}
 
 
-# -------- main --------
+# main
 
 
 def main():

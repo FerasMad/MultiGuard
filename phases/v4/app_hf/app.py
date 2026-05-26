@@ -111,7 +111,7 @@ def _ensure_v4_ckpts() -> tuple[Path, Path, Path]:
     return _V4_FUSION_PATH, _V1_FNDCLIP_PATH, a2_ckpt
 
 
-# --- Approach 1 ----------------------------------------------------------
+# Approach 1
 
 A1_TRANSFORM = transforms.Compose([
     transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BILINEAR),
@@ -155,7 +155,7 @@ def predict_a1(image: Image.Image | None) -> str:
     )
 
 
-# --- Approach 2 ----------------------------------------------------------
+# Approach 2
 
 
 def _load_dct_stats(stats_path: Path) -> tuple[float, float]:
@@ -359,7 +359,7 @@ def predict_v4(image: Image.Image | None, text: str | None):
     return labels, summary
 
 
-# --- Gradio UI ----------------------------------------------------------
+# Gradio UI
 
 INTRO_MD = """
 # 🛡️ MultiGuard — multimodal fake-news detector

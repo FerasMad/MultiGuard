@@ -22,9 +22,7 @@ from evaluate_forensic import (  # noqa: E402
 )
 
 
-# ---------------------------------------------------------------------------
 # metrics_block
-# ---------------------------------------------------------------------------
 
 
 def _make_proba_from_preds(y_pred: np.ndarray, n_classes: int = 3) -> np.ndarray:
@@ -100,9 +98,7 @@ def test_metrics_block_single_class_present_returns_nan_auc():
     assert np.isnan(m["auc_roc_macro"])
 
 
-# ---------------------------------------------------------------------------
 # MMFakeBench label mapping
-# ---------------------------------------------------------------------------
 
 
 def test_mmfb_original_is_real():

@@ -44,7 +44,7 @@ def build_dct_resnet50(pretrained: bool = True) -> nn.Module:
     weights = models.ResNet50_Weights.IMAGENET1K_V1 if pretrained else None
     model = models.resnet50(weights=weights)
 
-    # ---- conv1 modification ----
+    # conv1 modification
     # Keep all params identical to stock conv1 except in_channels (3 -> 1).
     new_conv1 = nn.Conv2d(
         in_channels=1,
@@ -58,16 +58,14 @@ def build_dct_resnet50(pretrained: bool = True) -> nn.Module:
     nn.init.kaiming_normal_(new_conv1.weight, mode="fan_out", nonlinearity="relu")
     model.conv1 = new_conv1
 
-    # ---- fc replacement ----
+    # fc replacement
     # Linear(2048, 1), no activation. BCEWithLogitsLoss applies sigmoid internally.
     model.fc = nn.Linear(2048, 1)
 
     return model
 
 
-# ---------------------------------------------------------------------------
 # Phase-1 / Phase-2 freeze helpers (doctor's training spec)
-# ---------------------------------------------------------------------------
 
 PHASE1_TRAINABLE: tuple[str, ...] = ("conv1", "bn1", "layer3", "layer4", "fc")
 PHASE1_FROZEN: tuple[str, ...] = ("layer1", "layer2")

@@ -25,9 +25,7 @@ import torch
 import torch.nn as nn
 
 
-# ---------------------------------------------------------------------------
 # Sub-module 1 — Pairwise bidirectional cross-attention
-# ---------------------------------------------------------------------------
 
 class PairwiseCrossAttention(nn.Module):
     """Bidirectional cross-attention between two [B, dim] vectors.
@@ -82,9 +80,7 @@ class PairwiseCrossAttention(nn.Module):
         return self.norm(dir1 + dir2)
 
 
-# ---------------------------------------------------------------------------
 # Sub-module 2 — Three-way fusion (pairwise attention + 1D-Conv)
-# ---------------------------------------------------------------------------
 
 class ThreeWayFusion(nn.Module):
     """Three-signal pairwise cross-attention followed by 1D-Conv integration.
@@ -144,7 +140,7 @@ class ThreeWayFusion(nn.Module):
         Returns:
             fused: [B, 1024]
         """
-        # --- LayerNorm ---
+        # LayerNorm
         s = self.ln_semantic(v_semantic)
         i = self.ln_imgfor(v_imgfor)
         t = self.ln_textfor(v_textfor)
@@ -154,7 +150,7 @@ class ThreeWayFusion(nn.Module):
         r2 = self.pair_sem_text(s, t)   # Pair 2: semantic ↔ text forensic    [B, 768]
         r3 = self.pair_img_text(i, t)   # Pair 3: image forensic ↔ text forensic [B, 768]
 
-        # --- Stack → [B, 3, 768], permute → [B, 768, 3] ---
+        # Stack → [B, 3, 768], permute → [B, 768, 3]
         stacked = torch.stack([r1, r2, r3], dim=1)   # [B, 3, 768]
         x = stacked.permute(0, 2, 1)                  # [B, 768, 3]
 
@@ -162,14 +158,12 @@ class ThreeWayFusion(nn.Module):
         x = self.act(self.conv1(x))   # [B, 768, 3]
         x = self.act(self.conv2(x))   # [B, 1024, 3]
 
-        # --- Global average pool across the 3 positions → [B, 1024] ---
+        # Global average pool across the 3 positions → [B, 1024]
         x = self.pool(x).squeeze(-1)  # [B, 1024]
         return x
 
 
-# ---------------------------------------------------------------------------
 # Sub-module 3 — MLP Classifier (V3 §6)
-# ---------------------------------------------------------------------------
 
 class V3Classifier(nn.Module):
     """Five-class MLP head for the fused [B, 1024] vector.
@@ -196,9 +190,7 @@ class V3Classifier(nn.Module):
         return self.net(fused)
 
 
-# ---------------------------------------------------------------------------
 # Top-level module — V3FusionModule (Student 4's plug-in point)
-# ---------------------------------------------------------------------------
 
 class V3FusionModule(nn.Module):
     """Complete V3 fusion + classification head.
@@ -273,9 +265,7 @@ class V3FusionModule(nn.Module):
         }
 
 
-# ---------------------------------------------------------------------------
 # Unit test — run with:  python src/models/v3_pipeline.py
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     import sys
@@ -306,7 +296,7 @@ if __name__ == "__main__":
     print(f"Trainable parameters: {trainable_params:,}")
     print()
 
-    # ---- Forward pass ----
+    # Forward pass
     out = model(v_sem, v_img, v_text)
 
     main_logits = out["main_logits"]
@@ -322,7 +312,7 @@ if __name__ == "__main__":
     assert fused.shape       == (B, 1024), f"Expected ({B}, 1024), got {fused.shape}"
     print("\nShape assertions — PASSED")
 
-    # ---- Backward pass (dummy loss) ----
+    # Backward pass (dummy loss)
     labels     = torch.randint(0, 5, (B,))
     aux_labels = torch.randint(0, 2, (B,))
 

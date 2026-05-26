@@ -54,9 +54,7 @@ def setup_ax(ax, xlim=(0, 14), ylim=(0, 10), title=None):
         ax.set_title(title, fontsize=13, fontweight="bold", pad=10)
 
 
-# =============================================================================
 # Diagram 1: What LLaVA actually is inside
-# =============================================================================
 fig, ax = plt.subplots(figsize=(14, 7))
 setup_ax(ax, (0, 14), (0, 8.5),
          "Diagram 1 — What LLaVA-1.5-7B actually is inside")
@@ -126,9 +124,7 @@ plt.close()
 print(f"wrote {OUT/'1_llava_architecture.png'}")
 
 
-# =============================================================================
 # Diagram 2: Our evaluation pipeline — what WE did
-# =============================================================================
 fig, ax = plt.subplots(figsize=(12, 10))
 setup_ax(ax, (0, 12), (0, 14),
          "Diagram 2 — Our evaluation pipeline (what we did)")
@@ -170,9 +166,7 @@ plt.close()
 print(f"wrote {OUT/'2_our_pipeline.png'}")
 
 
-# =============================================================================
 # Diagram 3: logit extraction
-# =============================================================================
 fig, ax = plt.subplots(figsize=(14, 6.5))
 setup_ax(ax, (0, 14), (0, 7),
          "Diagram 3 — LLaVA next-token logit extraction")
@@ -222,9 +216,7 @@ plt.close()
 print(f"wrote {OUT/'3_logit_extraction.png'}")
 
 
-# =============================================================================
 # Diagram 4: FND-CLIP vs LLaVA side by side
-# =============================================================================
 fig, ax = plt.subplots(figsize=(15, 9))
 setup_ax(ax, (0, 15), (0, 11),
          "Diagram 4 — FND-CLIP (trained) vs LLaVA (zero-shot), side by side")

@@ -22,9 +22,7 @@ SCENARIOS = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Dataset loaders - adjust paths/fields to match each dataset's actual schema
-# ---------------------------------------------------------------------------
 
 def load_mmfakebench(root, split="val"):
     """
@@ -153,9 +151,7 @@ def load_dgm4(root, split="train"):
     return pd.DataFrame(rows)
 
 
-# ---------------------------------------------------------------------------
 # Scenario assignment
-# ---------------------------------------------------------------------------
 
 def assign_scenario(row):
     text_real = row["text_label"] == "real"
@@ -175,9 +171,7 @@ def assign_scenario(row):
     return None
 
 
-# ---------------------------------------------------------------------------
 # Deduplication
-# ---------------------------------------------------------------------------
 
 def hash_row(row):
     text = str(row.get("text", "")).strip().lower()
@@ -193,9 +187,7 @@ def deduplicate(df):
     return df
 
 
-# ---------------------------------------------------------------------------
 # Balancing
-# ---------------------------------------------------------------------------
 
 def balance_classes(df):
     counts = df["scenario"].value_counts().to_dict()
@@ -219,9 +211,7 @@ def balance_classes(df):
     return pd.concat(balanced, ignore_index=True)
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 
 def main():
     p = argparse.ArgumentParser()

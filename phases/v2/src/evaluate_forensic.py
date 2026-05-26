@@ -340,7 +340,7 @@ def main():
     model.load_state_dict(ckpt["model_state"])
     print(f"Loaded checkpoint from epoch {ckpt.get('epoch', '?')}")
 
-    # ---- Test split ----
+    # Test split
     df = pd.read_csv(args.csv)
     test_df = df[df["split"] == "test"]
     test_set = DCTDataset(test_df, args.cache_dir)
@@ -360,7 +360,7 @@ def main():
     with open(out_dir / "test_metrics.yaml", "w") as f:
         yaml.safe_dump(test_m, f)
 
-    # ---- MMFakeBench transfer ----
+    # MMFakeBench transfer
     if not args.skip_mmfb:
         print(f"\nLoading MMFakeBench {args.mmfb_split}...")
         try:

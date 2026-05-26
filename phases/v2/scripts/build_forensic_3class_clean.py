@@ -147,7 +147,7 @@ def main():
     )
     dgm4_b = dgm4_b.drop(columns=[c for c in dgm4_b.columns if c == "split_p1"], errors="ignore")
 
-    # --- OOC: respect Phase 1 splits ---
+    # OOC: respect Phase 1 splits
     ooc_b = ooc.copy()
     ooc_b["split"] = ooc_b["split_p1"]
     ooc_b = ooc_b.drop(columns=["split_p1"])

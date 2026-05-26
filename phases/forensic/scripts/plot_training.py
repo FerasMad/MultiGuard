@@ -142,7 +142,7 @@ def main():
     ax_loss.set_title(args.title)
     ax_loss.legend(handles=[line_loss, line_ap], loc="center right", fontsize=9)
 
-    # ----- bottom panel: lr -----
+    # bottom panel: lr
     ax_bot.plot(epochs, lrs, marker="^", markersize=4, linewidth=1.5, color="tab:purple")
     ax_bot.set_yscale("log")
     ax_bot.set_xlabel("epoch")

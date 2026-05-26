@@ -84,7 +84,7 @@ def test_phase2_transition_4_invariants(tmp_path):
     p1_num_bad_epochs = t.scheduler.num_bad_epochs
     assert p1_num_bad_epochs > 0, "test precondition: Phase 1 scheduler should have bad epochs"
 
-    # ---- TRANSITION ----
+    # TRANSITION
     t._transition_to_phase2()
 
     # I1: optimizer reinit'd (new object)

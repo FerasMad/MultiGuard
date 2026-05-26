@@ -134,7 +134,7 @@ class TwoPhaseTrainer:
         freeze_phase1(self.model)
         self._build_optimizer_scheduler(phase=1)
 
-    # ------------------------------------------------------------------ phase mgmt
+    # phase mgmt
     def _build_optimizer_scheduler(self, phase: int) -> None:
         """(Re)build optimizer + scheduler for the given phase.
 
@@ -181,7 +181,7 @@ class TwoPhaseTrainer:
         self._build_optimizer_scheduler(phase=2)
         # self.early_stop intentionally preserved across boundary.
 
-    # ------------------------------------------------------------------ train + eval
+    # train + eval
     def _train_epoch(self) -> float:
         self.model.train()
         total_loss = 0.0
@@ -223,7 +223,7 @@ class TwoPhaseTrainer:
         val_acc = float(((probs_concat >= 0.5).astype(int) == labels_concat).mean())
         return val_ap, val_acc
 
-    # ------------------------------------------------------------------ checkpoint
+    # checkpoint
     def _save_checkpoint(self, path: Path, epoch: int, val_ap: float, val_acc: float) -> None:
         payload = {
             "model_state": self.model.state_dict(),
@@ -242,7 +242,7 @@ class TwoPhaseTrainer:
         }
         torch.save(payload, path)
 
-    # ------------------------------------------------------------------ fit
+    # fit
     def fit(self) -> dict:
         """Run the full Phase-1 -> Phase-2 training schedule with early-stop.
 

@@ -74,7 +74,7 @@ def main():
         else "_eval_table.md not yet generated_"
     )
 
-    # ---- Approach 1 artifacts (optional; render if present) ----
+    # Approach 1 artifacts (optional; render if present)
     rgb_train = _read_json(root / "phases/forensic/outputs/rgb/train_summary.json")
     rgb_eval = _read_json(root / "phases/forensic/outputs/eval_rgb.json")
     rgb_history = _read_csv_rows(root / "phases/forensic/outputs/rgb/training_history.csv")
@@ -102,7 +102,7 @@ def main():
     missing_gens = prep.get("missing_generators", [])
     missing_reason = prep.get("missing_reason", "")
 
-    # ---- write Markdown report ----
+    # write Markdown report
     lines: list[str] = []
     if approach1_present:
         lines.append(
@@ -248,7 +248,7 @@ def main():
         f"GAN-avg AP = {_fmt_optional(gan.get('ap'))}, "
         f"StdDev AP = {_fmt_optional(std_ap)}.\n"
     )
-    # ---- Approach 1 + combined section (only if A1 results exist) ----
+    # Approach 1 + combined section (only if A1 results exist)
     if approach1_present:
         rgb_agg = rgb_eval.get("aggregates", {})
         rgb_overall = rgb_agg.get("overall_avg", {})
@@ -295,7 +295,7 @@ def main():
             f"GAN-avg AP = {_fmt_optional(rgb_gan.get('ap'))}, "
             f"StdDev AP = {_fmt_optional(rgb_std_ap)}.\n"
         )
-        # ---- Combined comparison (F.25 final deliverable) ----
+        # Combined comparison (F.25 final deliverable)
         lines.append("\n## 6.6. Combined comparison (F.25 final deliverable)\n")
         if combined_table_md.strip():
             lines.append(combined_table_md.strip() + "\n")

@@ -39,7 +39,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-# --- import the external FakeImageDetection components ----------------------
+# import the external FakeImageDetection components
 EXTERNAL_ROOT = Path("phases/forensic/external/FakeImageDetection")
 if not EXTERNAL_ROOT.exists():
     print(
@@ -80,7 +80,7 @@ def seed_all(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
-# --- transforms (F.8 + F.9) -------------------------------------------------
+# transforms (F.8 + F.9)
 
 
 class RandomFourierMask:
@@ -132,7 +132,7 @@ def make_eval_transform() -> transforms.Compose:
     )
 
 
-# --- model loader (F.5 + F.6 + F.7) -----------------------------------------
+# model loader (F.5 + F.6 + F.7)
 
 
 def _resolve_checkpoint(preferred: Path | None) -> Path | None:
@@ -223,7 +223,7 @@ def build_rgb_model(checkpoint_path: Path | None, device: torch.device) -> tuple
     return model, init_method
 
 
-# --- training loop ----------------------------------------------------------
+# training loop
 
 
 def train_one_epoch(model, loader, criterion, optimizer, device) -> float:
@@ -290,7 +290,7 @@ def main():
         f"[train_rgb] max_epochs={args.epochs} batch={args.batch_size} workers={args.num_workers}"
     )
 
-    # --- data --------------------------------------------------------------
+    # data
     print(f"[train_rgb] loading train: {args.train_dir}")
     train_ds = datasets.ImageFolder(str(args.train_dir), transform=make_train_transform())
     val_ds = datasets.ImageFolder(str(args.val_dir), transform=make_eval_transform())
@@ -318,10 +318,10 @@ def main():
         pin_memory=pin,
     )
 
-    # --- model -------------------------------------------------------------
+    # model
     model, init_method = build_rgb_model(args.checkpoint, device)
 
-    # --- loss + optimizer + scheduler (F.10) -------------------------------
+    # loss + optimizer + scheduler (F.10)
     criterion = nn.BCEWithLogitsLoss()
     trainable_params = [p for p in model.parameters() if p.requires_grad]
     optimizer = AdamW(trainable_params, lr=LR, weight_decay=WEIGHT_DECAY)
