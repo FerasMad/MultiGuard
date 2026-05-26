@@ -126,8 +126,8 @@ def _build_pipeline():
     }
 
 
-@spaces.GPU(duration=120)
 def _ensemble_predict(pil_img: Image.Image, text: str) -> list[float]:
+    """Inner inference; called from within @spaces.GPU-decorated analyze()."""
     gpu = torch.device("cuda")
     _state["fndclip"].to(gpu)
     _state["dct_forensic"].to(gpu)
@@ -154,14 +154,16 @@ def _ensemble_predict(pil_img: Image.Image, text: str) -> list[float]:
     return probs.cpu().tolist()
 
 
+@spaces.GPU(duration=120)
 def analyze(image, text, lang):
-    """Gradio handler. Returns: verdict_html, probs_html, modules_html, error_str."""
+    """Gradio handler -- ZeroGPU is allocated for this function's duration.
+    Returns: (verdict_html, probs_html, modules_html)."""
     if not text or not text.strip():
         msg = "الرجاء إدخال نص الخبر" if lang == "ar" else "Please enter article text"
-        return _error_html(msg), "", "", msg
+        return _error_html(msg), "", ""
     if image is None:
         msg = "الرجاء رفع صورة" if lang == "ar" else "Please upload an image"
-        return _error_html(msg), "", "", msg
+        return _error_html(msg), "", ""
 
     try:
         pil_img = image if isinstance(image, Image.Image) else Image.fromarray(image)
@@ -169,7 +171,7 @@ def analyze(image, text, lang):
         probs = _ensemble_predict(pil_img, text)
     except Exception as e:
         log.exception("analyze failed")
-        return _error_html(f"{type(e).__name__}: {e}"), "", "", str(e)
+        return _error_html(f"{type(e).__name__}: {e}"), "", ""
 
     pred = int(np.argmax(probs))
     confidence = round(float(probs[pred]) * 100, 1)
@@ -330,13 +332,12 @@ def main():
             image_in = gr.Image(label="Article Image", type="pil", height=240)
 
         submit_btn = gr.Button("Analyze Article", variant="primary", size="lg")
-        error_box = gr.Markdown(visible=False)
 
         with gr.Row():
-            verdict_out = gr.HTML(label="")
+            verdict_out = gr.HTML()
             with gr.Column():
-                probs_out = gr.HTML(label="")
-                modules_out = gr.HTML(label="")
+                probs_out = gr.HTML()
+                modules_out = gr.HTML()
 
         with gr.Accordion("Sample inputs", open=False):
             gr.Markdown(
@@ -361,7 +362,8 @@ def main():
         submit_btn.click(
             fn=analyze,
             inputs=[image_in, text_in, lang_state],
-            outputs=[verdict_out, probs_out, modules_out, error_box],
+            outputs=[verdict_out, probs_out, modules_out],
+            api_name="analyze",
         )
 
     return demo
