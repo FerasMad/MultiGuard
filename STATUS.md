@@ -57,28 +57,32 @@ breakdowns.
 mix (FOLLOWUP C). Recommended for next iteration before the model is
 considered for live deployment.
 
-**V4 multimodal pipeline** (5-class detector, V3.1 spec):
-- Code + tests + V4 docs all on disk; CI green.
-- `dct_forensic_v1` encoder wrapper added - `forensic_dct_model.pth` is now
-  a drop-in Stage-1 init for V4 (replaces `blur_jpg_v0.pth`).
-- **V4 Stage 2 retrained on FSOS** using:
-  - new `v_imgfor_dctforensic` cache (16500 shards, built from `forensic_dct_model.pth`),
-  - V3 raw `v_semantic` (512) and `v_textfor_qwen` (3584) caches reused via inline
-    `proj_dims` projection heads in `V3PairwiseFusion` (P5.10a).
+**V4 multimodal pipeline** (5-class detector, V3.1 spec) — honest-path retrain:
+- `outputs/v4/stage2_fusion_dctforensic/best.pt` was the original "shortcut" ckpt
+  (val F1 0.7334 / test 0.7267 / transfer 0.4805). It carried two known issues:
+  (a) server-vs-eval parity broken — runtime `DctForensicEncoder.head` random-init never
+  saved (`cosine_sim=0.047`), and (b) classes 3/4 inflated by a documented caption shortcut
+  (MMFakeBench AI-text + MidJourney captions had a syntactic LLM fingerprint).
+- **Honest-path retrain** (Phase 1-7, see `docs/HONEST_RUN_REPORT.md`):
+  1. Phase 1 — deterministic `DctForensicEncoder.head` (`seed=42`) + saved state at
+     `outputs/v4/dctforensic_head_seed42.pt`. `cosine_sim` runtime-vs-cached 0.047 → 1.000000.
+  2. Phase 3 — BLIP-2-OPT-2.7B image-grounded captions for class 3/4
+     (`data/processed/forensic_5class_unified_blip2.csv` → `cache/v3/_features/v_textfor_qwen_blip2/`).
+     Text branch can no longer use syntactic shortcuts.
+  3. Phases 4-5 — 3-seed Stage 2 retrain on the new caches (`outputs/v4/stage2_fusion_honest_seed{42,1337,2024}/best.pt`).
+  4. Phase 6 — softmax ensemble + temperature calibration (T=1.454).
 
-  | Metric | V4 (this run) | V3 baseline |
-  |---|---|---|
-  | Val F1-macro | **0.7334** @ ep 4 | 0.7215 |
-  | Test F1-macro | **0.7267** | (V3 5-class test was never re-evaluated under §7) |
-  | MMFakeBench transfer F1-macro | **0.4805** | 0.3832 |
+  | Metric | Old ckpt (shortcut) | Honest seed=42 | 3-seed mean ± std | Ensemble |
+  |---|---|---|---|---|
+  | Test F1-macro | 0.7267 | 0.7152 | **0.7117 ± 0.0095** | **0.7149** |
+  | MMFakeBench transfer F1-macro | 0.4805 | 0.3516 | **0.3757 ± 0.0479** | **0.4308** |
 
-  Trained from `phases/v4/configs/v4_pipeline_dctforensic_v3caches.yaml`,
-  output `outputs/v4/stage2_fusion_dctforensic/best.pt`.
-  Early-stopped at epoch 14 (patience=10 from ep 4). +1.19 pp val vs V3,
-  +0.4805 vs 0.3832 (+9.7 pp) on transfer. Class 4 caption shortcut
-  persists via reused V3 text cache (per-class F1: cls3=0.997, cls4=0.998).
-- 3-seed runs (1337, 2024) and Stage 0 fresh fine-tune still deferred —
-  single-4070 + cache regen cost; not needed for current ship.
+  Per-class test F1 (ensemble): 0=0.397, 1=0.442, 2=0.757, 3=**0.989**, 4=**0.990**.
+  The ~1 pp drop on classes 3/4 (0.997 → 0.989 / 0.998 → 0.990) confirms the syntactic
+  shortcut was real and is now removed. Classes 0/1 stayed roughly the same (V1 leakfree
+  FND-CLIP kept after fresh Stage 0 attempt converged to a local min).
+- Trained from `phases/v4/configs/v4_pipeline_honest.yaml`. Full report:
+  `docs/HONEST_RUN_REPORT.md` + raw JSON: `phases/v4/docs/eval/honest_run_summary.json`.
 
 ---
 
@@ -113,8 +117,13 @@ considered for live deployment.
 | Approach 1 REPORT update | OK Done | REPORT.md / REPORT.docx now cover both approaches |
 | Approach 1 .pth on HF Hub | OK Uploaded | https://huggingface.co/FerasMad/forensic-rgb-v1 |
 | V4 cache regen (v_imgfor with dct_forensic_v1) | OK Done | 16500 shards @ ~155s on RTX 4070 (P5.10b) |
-| V4 Stage 2 retrain (seed=42) | OK Done | val_F1=0.7334 / test_F1=0.7267 / transfer_F1=0.4805 — P5.11a |
-| V4 Stage 0 fresh + seeds 1337/2024 | Deferred | Single-4070; not needed for current ship — see open follow-ups |
+| V4 Stage 2 retrain (seed=42, shortcut) | OK Done | val_F1=0.7334 / test_F1=0.7267 / transfer_F1=0.4805 — P5.11a |
+| V4 Stage 0 fresh fine-tune attempt | OK Done | Converged to local min, kept V1 leakfree (P9.2) |
+| V4 P9.1 server parity fix | OK Done | cosine_sim 0.047 → 1.000000 |
+| V4 P9.3 BLIP-2 caption rewrite (cls 3/4) | OK Done | 6600 captions, 6600 Qwen re-encodes via bnb-4bit |
+| V4 P9.4–P9.5 honest 3-seed retrain | OK Done | val F1 0.7292 ± 0.0055; test F1 0.7117 ± 0.0095 |
+| V4 P9.6 ensemble + temperature calibration | OK Done | Ensemble test 0.7149 / transfer 0.4308; T=1.454 |
+| V4 P9.7 doctor report + STATUS + push | OK Done | `docs/HONEST_RUN_REPORT.md` published |
 
 ---
 
@@ -156,12 +165,14 @@ python phases/forensic/scripts/build_combined_eval_table.py
 
 1. SD v1.4 / SD v1.5 generators (`phases/forensic/FOLLOWUP.md` A) - needs official
    GenImage Drive (browser-side).
-2. V4 multi-seed (1337, 2024) + fresh Stage 0 (FND-CLIP fine-tune) on dual-4090
-   - needs the 155 GB dataset transfer; current single-seed FSOS run is the ship.
+2. Classes 0/1 (NewsCLIPpings real vs OOC) remain the F1 bottleneck (~0.40-0.45).
+   Fresh Stage-0 FND-CLIP fine-tune on the unified manifest converged to a local
+   min on FSOS; a second attempt with a different optimizer / longer schedule on
+   a dual-4090 PC is the next experiment.
 3. ImageNet "nature" validation (FOLLOWUP C) - only if domain bias is a concern.
-4. V4 Class 4 / 3 caption-shortcut: dropped by reusing V3 text cache as-is.
-   Re-cache `v_textfor` over `forensic_5class_unified.csv` after BLIP-2 caption
-   rewrite once we re-stage VisualNews on a real GPU (deferred to next sprint).
+4. Honest-path captions (BLIP-2) only cover classes 3/4 in this run; if class 2
+   (Real-text + Fake-image / DGM4 + MMFakeBench tampered) shows any latent shortcut
+   in future audits, the same rewrite recipe applies (`phases/v4/scripts/blip2_caption_rewrite.py`).
 
 ---
 

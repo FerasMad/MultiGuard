@@ -58,24 +58,33 @@ def main():
 
     for split in args.splits:
         print(f"\n[ensemble] === split={split} ===")
+        # Mirror v4.cli.eval_main: mmfakebench-transfer is a filter on top of test split
+        underlying_split = "test" if split == "mmfakebench-transfer" else split
         try:
             ds = CachedFeatureDataset(
                 csv_path=data_cfg["csv_path"],
                 cache_root=data_cfg["cache_root"],
                 feature_keys=data_cfg["feature_keys"],
-                split=split,
+                split=underlying_split,
             )
+            if split == "mmfakebench-transfer":
+                ds.df = ds.df[ds.df["source"].str.startswith("MMFakeBench_")].reset_index(drop=True)
+                print(f"  MMFakeBench transfer subset: {len(ds.df)} rows")
         except Exception as e:
             print(f"  skip {split}: {type(e).__name__}: {e}")
+            continue
+        if len(ds) == 0:
+            print(f"  skip {split}: empty after filtering")
             continue
         loader = DataLoader(ds, batch_size=args.batch_size, shuffle=False,
                             num_workers=0, collate_fn=collate_cached)
 
+        feature_names = [fk["name"] for fk in data_cfg["feature_keys"]]
         all_probs = []
         all_labels = []
         with torch.no_grad():
             for batch in loader:
-                feats = {k: v.to(device) for k, v in batch["features"].items()}
+                feats = {name: batch[name].to(device) for name in feature_names}
                 out = ensemble(feats)
                 probs = out["main_probs"]
                 if args.temperature is not None and args.temperature != 1.0:

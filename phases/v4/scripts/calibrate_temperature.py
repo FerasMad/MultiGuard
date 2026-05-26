@@ -72,11 +72,12 @@ def main():
     loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
                         num_workers=0, collate_fn=collate_cached)
 
+    feature_names = [fk["name"] for fk in data_cfg["feature_keys"]]
     all_logits = []
     all_labels = []
     with torch.no_grad():
         for batch in loader:
-            feats = {k: v.to(device) for k, v in batch["features"].items()}
+            feats = {name: batch[name].to(device) for name in feature_names}
             out = fusion(feats)
             all_logits.append(out["main_logits"].cpu())
             all_labels.append(batch["label"].cpu())
