@@ -57,7 +57,13 @@ def main():
     for i, row in enumerate(sampled):
         gt = int(row["label"])
         sid = row["sample_id"]
-        text = str(row["text"])
+        # For honest-path retrain: classes 3 and 4 were trained on BLIP-2
+        # rewritten captions (text_blip2 column). If the manifest carries that
+        # column, use it for those classes; otherwise fall back to text.
+        if gt in (3, 4) and "text_blip2" in row and isinstance(row.get("text_blip2"), str) and row["text_blip2"]:
+            text = str(row["text_blip2"])
+        else:
+            text = str(row["text"])
         img_path = Path(row["image_path"])
         if not img_path.exists():
             print(f"  [{i+1}/{len(sampled)}] {sid} MISSING IMAGE: {img_path}")

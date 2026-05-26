@@ -179,18 +179,41 @@ python phases/forensic/scripts/build_combined_eval_table.py
 
 ---
 
-## Open follow-ups
+## Closed loose ends (gap-closure run, P11)
+
+User asked "what we didn't do from the checklist or failed?". Resulting actions
+that landed today:
+
+| ID | Item | Artifact |
+|---|---|---|
+| P11.1 / B1 | BLIP-2 caption sanity check (20-row eyeball) - Plan R-H3 risk | `phases/v4/docs/eval/blip2_caption_sanity.md` - 20/20 image-grounded, **PASS** |
+| P11.2 / P8.5 | Server v4_retrain code review (security + correctness) | `phases/v4/docs/eval/server_v4_retrain_review.md` - PASS with 5 LOW-severity recommendations |
+| P11.3 / B3 | 50-row server parity sweep on honest-path seed=42 (with P9.1 fix) | `phases/v4/docs/eval/honest_run_parity_sweep_50row.json` - class 4 **0% -> 90%** (P9.1 fix confirmed in production) |
+| P10.5 | Legacy `tests/` rot fixed | 4 stale path inserts surgically patched; 44 previously-broken tests now passing |
+| P8.6 | Full pytest suite | 95 tests green (V4 39 + forensic 12 + legacy 44) |
+
+## Open follow-ups (still deferred, doctor-acknowledged)
 
 1. SD v1.4 / SD v1.5 generators (`phases/forensic/FOLLOWUP.md` A) - needs official
    GenImage Drive (browser-side).
 2. Classes 0/1 (NewsCLIPpings real vs OOC) remain the F1 bottleneck (~0.40-0.45).
-   Fresh Stage-0 FND-CLIP fine-tune on the unified manifest converged to a local
-   min on FSOS; a second attempt with a different optimizer / longer schedule on
-   a dual-4090 PC is the next experiment.
+   **Stage-0 retry attempted in P10.2 - overfit on the 4620-row binary OOC subset
+   (data-scale limit, not recipe).** Future fix needs expanded NewsCLIPpings or
+   additional OOC corpus (e.g. Twitter Image Verification Corpus). See
+   `docs/HONEST_RUN_REPORT.md` paragraph "Stage-0 FND-CLIP retry - honest negative result".
 3. ImageNet "nature" validation (FOLLOWUP C) - only if domain bias is a concern.
 4. Honest-path captions (BLIP-2) only cover classes 3/4 in this run; if class 2
    (Real-text + Fake-image / DGM4 + MMFakeBench tampered) shows any latent shortcut
    in future audits, the same rewrite recipe applies (`phases/v4/scripts/blip2_caption_rewrite.py`).
+5. TTA offline lift measurement deferred - `phases/v4/src/v4/evaluation/tta.py`
+   is built for raw-PIL runtime use; offline measurement on cached features would
+   require building a `v_imgfor_flip` + `v_semantic_flip` cache (~1-2h). TTA
+   stays available at server runtime but is not included in the headline numbers.
+6. ngrok public-URL end-to-end test (P8.4) deferred - requires per-instance
+   approval per session security policy.
+7. Ensemble loading in `app/server_v4_retrain.py` - server is single-ckpt
+   (per code review R5); offline ensemble + biascorr produces +28.9pp transfer F1
+   not yet replicated at runtime. ~40 LOC to mirror `EnsembleFusion`.
 
 ---
 

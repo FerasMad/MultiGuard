@@ -1,0 +1,1184 @@
+{
+  "n_sampled": 50,
+  "n_evaluated": 50,
+  "n_failed": 0,
+  "overall_accuracy": 0.52,
+  "per_class_accuracy": {
+    "0": 0.1,
+    "1": 0.3,
+    "2": 0.9,
+    "3": 0.4,
+    "4": 0.9
+  },
+  "per_class_count": {
+    "0": 10,
+    "1": 10,
+    "2": 10,
+    "3": 10,
+    "4": 10
+  },
+  "per_class_correct": {
+    "0": 1,
+    "1": 3,
+    "2": 9,
+    "3": 4,
+    "4": 9
+  },
+  "wall_clock_s": 202.7,
+  "per_request_seconds_mean": 4.05,
+  "server": "http://127.0.0.1:8081",
+  "manifest": "data\\processed\\forensic_5class_unified_blip2.csv",
+  "seed": 42,
+  "samples": [
+    {
+      "sample_id": "nclip_77896_77896",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 1,
+      "confidence": 53.8,
+      "probabilities": {
+        "Real": 0.4559,
+        "Out-of-Context": 0.538,
+        "Manipulated": 0.0056,
+        "AI-Text": 0.0003,
+        "Fully-Fabricated": 0.0002
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.27,
+        "image_manip": 0.01,
+        "cross_modal": 0.54,
+        "overall": 0.54
+      },
+      "match": false,
+      "elapsed_s": 5.31
+    },
+    {
+      "sample_id": "nclip_286108_286108",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 1,
+      "confidence": 50.1,
+      "probabilities": {
+        "Real": 0.4967,
+        "Out-of-Context": 0.5015,
+        "Manipulated": 0.0016,
+        "AI-Text": 0.0001,
+        "Fully-Fabricated": 0.0001
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.25,
+        "image_manip": 0.0,
+        "cross_modal": 0.5,
+        "overall": 0.5
+      },
+      "match": false,
+      "elapsed_s": 4.0
+    },
+    {
+      "sample_id": "nclip_431236_431236",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 0,
+      "confidence": 58.9,
+      "probabilities": {
+        "Real": 0.5891,
+        "Out-of-Context": 0.3904,
+        "Manipulated": 0.0193,
+        "AI-Text": 0.0007,
+        "Fully-Fabricated": 0.0005
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.2,
+        "image_manip": 0.02,
+        "cross_modal": 0.39,
+        "overall": 0.41
+      },
+      "match": true,
+      "elapsed_s": 3.96
+    },
+    {
+      "sample_id": "nclip_613435_613435",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 1,
+      "confidence": 65.3,
+      "probabilities": {
+        "Real": 0.3432,
+        "Out-of-Context": 0.6528,
+        "Manipulated": 0.0038,
+        "AI-Text": 0.0001,
+        "Fully-Fabricated": 0.0001
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.33,
+        "image_manip": 0.0,
+        "cross_modal": 0.65,
+        "overall": 0.66
+      },
+      "match": false,
+      "elapsed_s": 4.04
+    },
+    {
+      "sample_id": "nclip_1477531_1477531",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 1,
+      "confidence": 49.0,
+      "probabilities": {
+        "Real": 0.3328,
+        "Out-of-Context": 0.4903,
+        "Manipulated": 0.1734,
+        "AI-Text": 0.0017,
+        "Fully-Fabricated": 0.0018
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.25,
+        "image_manip": 0.18,
+        "cross_modal": 0.49,
+        "overall": 0.67
+      },
+      "match": false,
+      "elapsed_s": 3.94
+    },
+    {
+      "sample_id": "nclip_460812_460812",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 1,
+      "confidence": 61.3,
+      "probabilities": {
+        "Real": 0.3313,
+        "Out-of-Context": 0.6126,
+        "Manipulated": 0.0546,
+        "AI-Text": 0.0008,
+        "Fully-Fabricated": 0.0006
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.31,
+        "image_manip": 0.06,
+        "cross_modal": 0.61,
+        "overall": 0.67
+      },
+      "match": false,
+      "elapsed_s": 3.95
+    },
+    {
+      "sample_id": "nclip_94740_94740",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 2,
+      "confidence": 81.1,
+      "probabilities": {
+        "Real": 0.0877,
+        "Out-of-Context": 0.0989,
+        "Manipulated": 0.811,
+        "AI-Text": 0.0013,
+        "Fully-Fabricated": 0.0012
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.05,
+        "image_manip": 0.81,
+        "cross_modal": 0.1,
+        "overall": 0.91
+      },
+      "match": false,
+      "elapsed_s": 4.05
+    },
+    {
+      "sample_id": "nclip_1633822_1633822",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 1,
+      "confidence": 55.3,
+      "probabilities": {
+        "Real": 0.4455,
+        "Out-of-Context": 0.5532,
+        "Manipulated": 0.0012,
+        "AI-Text": 0.0001,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.28,
+        "image_manip": 0.0,
+        "cross_modal": 0.55,
+        "overall": 0.55
+      },
+      "match": false,
+      "elapsed_s": 4.02
+    },
+    {
+      "sample_id": "nclip_682029_682029",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 1,
+      "confidence": 63.6,
+      "probabilities": {
+        "Real": 0.278,
+        "Out-of-Context": 0.636,
+        "Manipulated": 0.0851,
+        "AI-Text": 0.0005,
+        "Fully-Fabricated": 0.0004
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.32,
+        "image_manip": 0.09,
+        "cross_modal": 0.64,
+        "overall": 0.72
+      },
+      "match": false,
+      "elapsed_s": 4.04
+    },
+    {
+      "sample_id": "nclip_1022680_1022680",
+      "source": "NewsCLIPpings_genuine",
+      "gt_label": 0,
+      "pred_label": 1,
+      "confidence": 63.2,
+      "probabilities": {
+        "Real": 0.3663,
+        "Out-of-Context": 0.6322,
+        "Manipulated": 0.0013,
+        "AI-Text": 0.0001,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.32,
+        "image_manip": 0.0,
+        "cross_modal": 0.63,
+        "overall": 0.63
+      },
+      "match": false,
+      "elapsed_s": 4.09
+    },
+    {
+      "sample_id": "nclip_507309_823379",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 1,
+      "confidence": 50.5,
+      "probabilities": {
+        "Real": 0.4819,
+        "Out-of-Context": 0.5055,
+        "Manipulated": 0.0121,
+        "AI-Text": 0.0003,
+        "Fully-Fabricated": 0.0003
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.25,
+        "image_manip": 0.01,
+        "cross_modal": 0.51,
+        "overall": 0.52
+      },
+      "match": true,
+      "elapsed_s": 4.1
+    },
+    {
+      "sample_id": "nclip_796581_700649",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 0,
+      "confidence": 51.9,
+      "probabilities": {
+        "Real": 0.5193,
+        "Out-of-Context": 0.4799,
+        "Manipulated": 0.0008,
+        "AI-Text": 0.0,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.24,
+        "image_manip": 0.0,
+        "cross_modal": 0.48,
+        "overall": 0.48
+      },
+      "match": false,
+      "elapsed_s": 3.98
+    },
+    {
+      "sample_id": "nclip_824678_1176311",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 0,
+      "confidence": 63.2,
+      "probabilities": {
+        "Real": 0.6316,
+        "Out-of-Context": 0.3673,
+        "Manipulated": 0.001,
+        "AI-Text": 0.0001,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.18,
+        "image_manip": 0.0,
+        "cross_modal": 0.37,
+        "overall": 0.37
+      },
+      "match": false,
+      "elapsed_s": 3.96
+    },
+    {
+      "sample_id": "nclip_438933_337714",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 1,
+      "confidence": 61.0,
+      "probabilities": {
+        "Real": 0.3664,
+        "Out-of-Context": 0.6103,
+        "Manipulated": 0.0207,
+        "AI-Text": 0.0015,
+        "Fully-Fabricated": 0.0011
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.31,
+        "image_manip": 0.02,
+        "cross_modal": 0.61,
+        "overall": 0.63
+      },
+      "match": true,
+      "elapsed_s": 4.0
+    },
+    {
+      "sample_id": "nclip_183280_312075",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 0,
+      "confidence": 51.8,
+      "probabilities": {
+        "Real": 0.5182,
+        "Out-of-Context": 0.481,
+        "Manipulated": 0.0007,
+        "AI-Text": 0.0,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.24,
+        "image_manip": 0.0,
+        "cross_modal": 0.48,
+        "overall": 0.48
+      },
+      "match": false,
+      "elapsed_s": 3.95
+    },
+    {
+      "sample_id": "nclip_1135408_1676307",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 2,
+      "confidence": 43.0,
+      "probabilities": {
+        "Real": 0.2972,
+        "Out-of-Context": 0.2703,
+        "Manipulated": 0.43,
+        "AI-Text": 0.0014,
+        "Fully-Fabricated": 0.0011
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.14,
+        "image_manip": 0.43,
+        "cross_modal": 0.27,
+        "overall": 0.7
+      },
+      "match": false,
+      "elapsed_s": 4.84
+    },
+    {
+      "sample_id": "nclip_1447089_1672079",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 2,
+      "confidence": 99.8,
+      "probabilities": {
+        "Real": 0.0012,
+        "Out-of-Context": 0.0007,
+        "Manipulated": 0.9981,
+        "AI-Text": 0.0,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.0,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": false,
+      "elapsed_s": 4.0
+    },
+    {
+      "sample_id": "nclip_172889_130206",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 0,
+      "confidence": 59.0,
+      "probabilities": {
+        "Real": 0.5902,
+        "Out-of-Context": 0.4087,
+        "Manipulated": 0.0009,
+        "AI-Text": 0.0,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.2,
+        "image_manip": 0.0,
+        "cross_modal": 0.41,
+        "overall": 0.41
+      },
+      "match": false,
+      "elapsed_s": 4.07
+    },
+    {
+      "sample_id": "nclip_1453304_1608815",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 0,
+      "confidence": 51.3,
+      "probabilities": {
+        "Real": 0.5126,
+        "Out-of-Context": 0.4626,
+        "Manipulated": 0.024,
+        "AI-Text": 0.0005,
+        "Fully-Fabricated": 0.0004
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.23,
+        "image_manip": 0.02,
+        "cross_modal": 0.46,
+        "overall": 0.49
+      },
+      "match": false,
+      "elapsed_s": 4.0
+    },
+    {
+      "sample_id": "nclip_945104_888866",
+      "source": "NewsCLIPpings_OOC",
+      "gt_label": 1,
+      "pred_label": 1,
+      "confidence": 39.5,
+      "probabilities": {
+        "Real": 0.2886,
+        "Out-of-Context": 0.3954,
+        "Manipulated": 0.3142,
+        "AI-Text": 0.001,
+        "Fully-Fabricated": 0.0008
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.2,
+        "image_manip": 0.32,
+        "cross_modal": 0.4,
+        "overall": 0.71
+      },
+      "match": true,
+      "elapsed_s": 4.02
+    },
+    {
+      "sample_id": "dgm4_861701",
+      "source": "DGM4_face_swap",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 94.1,
+      "probabilities": {
+        "Real": 0.0293,
+        "Out-of-Context": 0.0295,
+        "Manipulated": 0.941,
+        "AI-Text": 0.0001,
+        "Fully-Fabricated": 0.0001
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.01,
+        "image_manip": 0.94,
+        "cross_modal": 0.03,
+        "overall": 0.97
+      },
+      "match": true,
+      "elapsed_s": 4.07
+    },
+    {
+      "sample_id": "dgm4_437034",
+      "source": "DGM4_face_attribute",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 99.3,
+      "probabilities": {
+        "Real": 0.0041,
+        "Out-of-Context": 0.0028,
+        "Manipulated": 0.9931,
+        "AI-Text": 0.0,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.0,
+        "image_manip": 0.99,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.98
+    },
+    {
+      "sample_id": "dgm4_399324",
+      "source": "DGM4_face_swap",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 99.9,
+      "probabilities": {
+        "Real": 0.001,
+        "Out-of-Context": 0.0004,
+        "Manipulated": 0.9985,
+        "AI-Text": 0.0,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.0,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.96
+    },
+    {
+      "sample_id": "dgm4_496368",
+      "source": "DGM4_face_attribute",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 100.0,
+      "probabilities": {
+        "Real": 0.0,
+        "Out-of-Context": 0.0,
+        "Manipulated": 1.0,
+        "AI-Text": 0.0,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.0,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 4.02
+    },
+    {
+      "sample_id": "dgm4_1199326",
+      "source": "DGM4_face_swap",
+      "gt_label": 2,
+      "pred_label": 1,
+      "confidence": 52.0,
+      "probabilities": {
+        "Real": 0.4093,
+        "Out-of-Context": 0.52,
+        "Manipulated": 0.0697,
+        "AI-Text": 0.0005,
+        "Fully-Fabricated": 0.0004
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.26,
+        "image_manip": 0.07,
+        "cross_modal": 0.52,
+        "overall": 0.59
+      },
+      "match": false,
+      "elapsed_s": 4.01
+    },
+    {
+      "sample_id": "dgm4_1246630",
+      "source": "DGM4_face_attribute",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 71.4,
+      "probabilities": {
+        "Real": 0.1396,
+        "Out-of-Context": 0.1449,
+        "Manipulated": 0.7136,
+        "AI-Text": 0.0011,
+        "Fully-Fabricated": 0.0009
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.07,
+        "image_manip": 0.71,
+        "cross_modal": 0.14,
+        "overall": 0.86
+      },
+      "match": true,
+      "elapsed_s": 4.06
+    },
+    {
+      "sample_id": "dgm4_761811",
+      "source": "DGM4_face_attribute",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 93.7,
+      "probabilities": {
+        "Real": 0.034,
+        "Out-of-Context": 0.0277,
+        "Manipulated": 0.9372,
+        "AI-Text": 0.0006,
+        "Fully-Fabricated": 0.0005
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.01,
+        "image_manip": 0.94,
+        "cross_modal": 0.03,
+        "overall": 0.97
+      },
+      "match": true,
+      "elapsed_s": 4.05
+    },
+    {
+      "sample_id": "dgm4_1218768",
+      "source": "DGM4_face_swap",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 88.0,
+      "probabilities": {
+        "Real": 0.0656,
+        "Out-of-Context": 0.0532,
+        "Manipulated": 0.8805,
+        "AI-Text": 0.0004,
+        "Fully-Fabricated": 0.0003
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.03,
+        "image_manip": 0.88,
+        "cross_modal": 0.05,
+        "overall": 0.93
+      },
+      "match": true,
+      "elapsed_s": 4.02
+    },
+    {
+      "sample_id": "dgm4_513750",
+      "source": "DGM4_face_attribute",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 89.1,
+      "probabilities": {
+        "Real": 0.0511,
+        "Out-of-Context": 0.0575,
+        "Manipulated": 0.8911,
+        "AI-Text": 0.0002,
+        "Fully-Fabricated": 0.0001
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.03,
+        "image_manip": 0.89,
+        "cross_modal": 0.06,
+        "overall": 0.95
+      },
+      "match": true,
+      "elapsed_s": 4.04
+    },
+    {
+      "sample_id": "dgm4_131762",
+      "source": "DGM4_face_swap",
+      "gt_label": 2,
+      "pred_label": 2,
+      "confidence": 99.9,
+      "probabilities": {
+        "Real": 0.0008,
+        "Out-of-Context": 0.0003,
+        "Manipulated": 0.9989,
+        "AI-Text": 0.0,
+        "Fully-Fabricated": 0.0
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.0,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.96
+    },
+    {
+      "sample_id": "mmfb_test_05188",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 3,
+      "confidence": 80.7,
+      "probabilities": {
+        "Real": 0.0085,
+        "Out-of-Context": 0.0089,
+        "Manipulated": 0.0112,
+        "AI-Text": 0.807,
+        "Fully-Fabricated": 0.1644
+      },
+      "modules": {
+        "text_ai": 0.97,
+        "text_patterns": 0.49,
+        "image_manip": 0.18,
+        "cross_modal": 0.01,
+        "overall": 0.99
+      },
+      "match": true,
+      "elapsed_s": 3.95
+    },
+    {
+      "sample_id": "mmfb_test_03906",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 4,
+      "confidence": 94.2,
+      "probabilities": {
+        "Real": 0.0017,
+        "Out-of-Context": 0.0018,
+        "Manipulated": 0.0069,
+        "AI-Text": 0.0477,
+        "Fully-Fabricated": 0.9419
+      },
+      "modules": {
+        "text_ai": 0.99,
+        "text_patterns": 0.5,
+        "image_manip": 0.95,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": false,
+      "elapsed_s": 3.9
+    },
+    {
+      "sample_id": "mmfb_test_05192",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 4,
+      "confidence": 99.2,
+      "probabilities": {
+        "Real": 0.0006,
+        "Out-of-Context": 0.0007,
+        "Manipulated": 0.0014,
+        "AI-Text": 0.0049,
+        "Fully-Fabricated": 0.9924
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 0.99,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": false,
+      "elapsed_s": 3.93
+    },
+    {
+      "sample_id": "mmfb_val_00325",
+      "source": "MMFakeBench_textual_val",
+      "gt_label": 3,
+      "pred_label": 4,
+      "confidence": 63.9,
+      "probabilities": {
+        "Real": 0.0536,
+        "Out-of-Context": 0.0554,
+        "Manipulated": 0.0485,
+        "AI-Text": 0.2037,
+        "Fully-Fabricated": 0.6389
+      },
+      "modules": {
+        "text_ai": 0.84,
+        "text_patterns": 0.45,
+        "image_manip": 0.69,
+        "cross_modal": 0.06,
+        "overall": 0.95
+      },
+      "match": false,
+      "elapsed_s": 3.98
+    },
+    {
+      "sample_id": "mmfb_test_03850",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 3,
+      "confidence": 95.0,
+      "probabilities": {
+        "Real": 0.0011,
+        "Out-of-Context": 0.0013,
+        "Manipulated": 0.0027,
+        "AI-Text": 0.9504,
+        "Fully-Fabricated": 0.0445
+      },
+      "modules": {
+        "text_ai": 0.99,
+        "text_patterns": 0.5,
+        "image_manip": 0.05,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 4.13
+    },
+    {
+      "sample_id": "mmfb_test_05397",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 4,
+      "confidence": 90.0,
+      "probabilities": {
+        "Real": 0.0041,
+        "Out-of-Context": 0.0042,
+        "Manipulated": 0.0156,
+        "AI-Text": 0.0759,
+        "Fully-Fabricated": 0.9001
+      },
+      "modules": {
+        "text_ai": 0.98,
+        "text_patterns": 0.49,
+        "image_manip": 0.92,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": false,
+      "elapsed_s": 3.84
+    },
+    {
+      "sample_id": "mmfb_test_05728",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 1,
+      "confidence": 62.4,
+      "probabilities": {
+        "Real": 0.3514,
+        "Out-of-Context": 0.6241,
+        "Manipulated": 0.0222,
+        "AI-Text": 0.0013,
+        "Fully-Fabricated": 0.0008
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.31,
+        "image_manip": 0.02,
+        "cross_modal": 0.62,
+        "overall": 0.65
+      },
+      "match": false,
+      "elapsed_s": 3.98
+    },
+    {
+      "sample_id": "mmfb_test_03101",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 4,
+      "confidence": 88.0,
+      "probabilities": {
+        "Real": 0.0079,
+        "Out-of-Context": 0.0086,
+        "Manipulated": 0.019,
+        "AI-Text": 0.0844,
+        "Fully-Fabricated": 0.8801
+      },
+      "modules": {
+        "text_ai": 0.96,
+        "text_patterns": 0.49,
+        "image_manip": 0.9,
+        "cross_modal": 0.01,
+        "overall": 0.99
+      },
+      "match": false,
+      "elapsed_s": 4.09
+    },
+    {
+      "sample_id": "mmfb_test_03925",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 3,
+      "confidence": 100.0,
+      "probabilities": {
+        "Real": 0.0,
+        "Out-of-Context": 0.0,
+        "Manipulated": 0.0002,
+        "AI-Text": 0.9996,
+        "Fully-Fabricated": 0.0001
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 0.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 4.02
+    },
+    {
+      "sample_id": "mmfb_test_05223",
+      "source": "MMFakeBench_textual_test",
+      "gt_label": 3,
+      "pred_label": 3,
+      "confidence": 100.0,
+      "probabilities": {
+        "Real": 0.0,
+        "Out-of-Context": 0.0,
+        "Manipulated": 0.0,
+        "AI-Text": 0.9999,
+        "Fully-Fabricated": 0.0001
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 0.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.94
+    },
+    {
+      "sample_id": "genimage_mj_003416",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 99.1,
+      "probabilities": {
+        "Real": 0.0013,
+        "Out-of-Context": 0.0016,
+        "Manipulated": 0.0033,
+        "AI-Text": 0.0031,
+        "Fully-Fabricated": 0.9907
+      },
+      "modules": {
+        "text_ai": 0.99,
+        "text_patterns": 0.5,
+        "image_manip": 0.99,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.95
+    },
+    {
+      "sample_id": "genimage_mj_006467",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 99.6,
+      "probabilities": {
+        "Real": 0.0005,
+        "Out-of-Context": 0.0006,
+        "Manipulated": 0.0012,
+        "AI-Text": 0.0014,
+        "Fully-Fabricated": 0.9964
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.95
+    },
+    {
+      "sample_id": "genimage_mj_009152",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 99.9,
+      "probabilities": {
+        "Real": 0.0001,
+        "Out-of-Context": 0.0001,
+        "Manipulated": 0.0003,
+        "AI-Text": 0.0005,
+        "Fully-Fabricated": 0.999
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.92
+    },
+    {
+      "sample_id": "genimage_mj_001486",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 100.0,
+      "probabilities": {
+        "Real": 0.0,
+        "Out-of-Context": 0.0,
+        "Manipulated": 0.0001,
+        "AI-Text": 0.0002,
+        "Fully-Fabricated": 0.9996
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.93
+    },
+    {
+      "sample_id": "genimage_mj_000308",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 100.0,
+      "probabilities": {
+        "Real": 0.0,
+        "Out-of-Context": 0.0,
+        "Manipulated": 0.0001,
+        "AI-Text": 0.0001,
+        "Fully-Fabricated": 0.9998
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.91
+    },
+    {
+      "sample_id": "genimage_mj_003208",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 97.4,
+      "probabilities": {
+        "Real": 0.0035,
+        "Out-of-Context": 0.0034,
+        "Manipulated": 0.0108,
+        "AI-Text": 0.0085,
+        "Fully-Fabricated": 0.9738
+      },
+      "modules": {
+        "text_ai": 0.98,
+        "text_patterns": 0.49,
+        "image_manip": 0.98,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 3.97
+    },
+    {
+      "sample_id": "genimage_mj_001221",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 99.8,
+      "probabilities": {
+        "Real": 0.0002,
+        "Out-of-Context": 0.0003,
+        "Manipulated": 0.0005,
+        "AI-Text": 0.0009,
+        "Fully-Fabricated": 0.9981
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 4.2
+    },
+    {
+      "sample_id": "genimage_mj_003724",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 0,
+      "confidence": 56.2,
+      "probabilities": {
+        "Real": 0.5618,
+        "Out-of-Context": 0.4336,
+        "Manipulated": 0.0043,
+        "AI-Text": 0.0002,
+        "Fully-Fabricated": 0.0001
+      },
+      "modules": {
+        "text_ai": 0.0,
+        "text_patterns": 0.22,
+        "image_manip": 0.0,
+        "cross_modal": 0.43,
+        "overall": 0.44
+      },
+      "match": false,
+      "elapsed_s": 4.25
+    },
+    {
+      "sample_id": "genimage_mj_002750",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 99.8,
+      "probabilities": {
+        "Real": 0.0002,
+        "Out-of-Context": 0.0002,
+        "Manipulated": 0.0011,
+        "AI-Text": 0.0007,
+        "Fully-Fabricated": 0.9979
+      },
+      "modules": {
+        "text_ai": 1.0,
+        "text_patterns": 0.5,
+        "image_manip": 1.0,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 4.19
+    },
+    {
+      "sample_id": "genimage_mj_007325",
+      "source": "GenImage_MidJourney",
+      "gt_label": 4,
+      "pred_label": 4,
+      "confidence": 90.7,
+      "probabilities": {
+        "Real": 0.0021,
+        "Out-of-Context": 0.0024,
+        "Manipulated": 0.0064,
+        "AI-Text": 0.0816,
+        "Fully-Fabricated": 0.9075
+      },
+      "modules": {
+        "text_ai": 0.99,
+        "text_patterns": 0.5,
+        "image_manip": 0.91,
+        "cross_modal": 0.0,
+        "overall": 1.0
+      },
+      "match": true,
+      "elapsed_s": 4.19
+    }
+  ]
+}
