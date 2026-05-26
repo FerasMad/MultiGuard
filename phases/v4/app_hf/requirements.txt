@@ -1,11 +1,11 @@
-# HF Space Docker SDK -- FastAPI + ZeroGPU
+# Gradio SDK + FastAPI mounted (ZeroGPU compatible)
 torch>=2.4.0
 torchvision>=0.19.0
 transformers>=4.45.0,<5.0
 accelerate>=0.34.0
 huggingface_hub>=0.30.0
+gradio>=5.9.1
 fastapi>=0.110.0
-uvicorn[standard]>=0.30.0
 python-multipart>=0.0.9
 pillow>=10.2.0
 numpy>=1.26,<2.0

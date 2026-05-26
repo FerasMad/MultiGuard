@@ -1,13 +1,14 @@
-"""MultiGuard HF Space (Docker SDK) -- FastAPI + static UI + honest-path 3-seed ensemble.
+"""MultiGuard HF Space -- Gradio SDK with FastAPI mounted (ZeroGPU-compatible).
 
-Endpoints:
-  GET  /api/health    -> ckpt info + headline metrics
-  POST /api/analyze   -> multipart (text, image) -> JSON verdict
-  GET  /              -> static UI (mounted last)
+HF Spaces ZeroGPU only works with the Gradio SDK. To keep the same bilingual
+EN/AR website UI from app/static/, we:
+  1. Build a FastAPI app with POST /api/analyze and static UI at /
+  2. Build a tiny Gradio Blocks (required so HF detects this as a Gradio Space)
+  3. Mount Gradio at /gradio inside the FastAPI app
+  4. Wrap inference with @spaces.GPU so each /api/analyze request gets ZeroGPU
 
-Inference uses the 3-seed honest-path ensemble (softmax average) downloaded
-from FerasMad/multiguard-v4-honest on HF Hub. Wrapped in @spaces.GPU so each
-request gets a ZeroGPU allocation.
+The user sees the same UI as the local FastAPI server; the API contract is
+identical so the existing JavaScript in index.html keeps working.
 """
 
 from __future__ import annotations
@@ -15,10 +16,10 @@ from __future__ import annotations
 import io
 import json
 import logging
-import os
 import time
 from pathlib import Path
 
+import gradio as gr
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -37,14 +38,7 @@ from inline.fnd_clip import FNDCLIPSemanticEncoder, prepare_fnd_inputs
 from inline.qwen_text import Qwen2TextEncoder
 from inline.v3_pairwise import V3PairwiseFusion
 
-try:
-    import spaces
-    GPU_DECORATOR = spaces.GPU
-except ImportError:
-    def GPU_DECORATOR(duration: int = 120):
-        def deco(f):
-            return f
-        return deco
+import spaces
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 log = logging.getLogger("multiguard")
@@ -126,7 +120,6 @@ def _build_pipeline():
         fusions.append(fusion)
 
     stats_obj = json.loads(Path(dct_stats).read_text(encoding="utf-8"))
-
     log.info("[build] pipeline ready in %.1fs (device=%s)", time.time() - t0, DEVICE)
     return {
         "fndclip": fndclip,
@@ -138,7 +131,7 @@ def _build_pipeline():
     }
 
 
-@GPU_DECORATOR(duration=120)
+@spaces.GPU(duration=120)
 def _ensemble_predict(pil_img: Image.Image, text: str) -> list[float]:
     """3-seed softmax-average ensemble. Returns 5-vector of probabilities."""
     fnd_batch = prepare_fnd_inputs(text, pil_img)
@@ -163,8 +156,8 @@ def _ensemble_predict(pil_img: Image.Image, text: str) -> list[float]:
     return probs.cpu().tolist()
 
 
-app = FastAPI(title="MultiGuard (honest-path ensemble)")
-app.add_middleware(
+fastapi_app = FastAPI(title="MultiGuard (honest-path ensemble)")
+fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
@@ -172,12 +165,12 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
+@fastapi_app.on_event("startup")
 async def _startup() -> None:
     _state.update(_build_pipeline())
 
 
-@app.get("/api/health")
+@fastapi_app.get("/api/health")
 async def health() -> dict:
     return {
         "status": "ok",
@@ -193,7 +186,7 @@ async def health() -> dict:
     }
 
 
-@app.post("/api/analyze")
+@fastapi_app.post("/api/analyze")
 async def analyze(text: str = Form(...), image: UploadFile = File(...)) -> JSONResponse:
     try:
         img_bytes = await image.read()
@@ -242,9 +235,19 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)) -> JSONR
 
 _static_dir = Path(__file__).parent / "static"
 if _static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")
+    fastapi_app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")
+
+
+with gr.Blocks(analytics_enabled=False) as demo:
+    gr.Markdown(
+        "## MultiGuard API\n\n"
+        "The bilingual web UI is at the root of this Space.\n"
+        "POST `/api/analyze` with multipart `text` + `image` returns a verdict."
+    )
+
+app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "7860")))
+    uvicorn.run(app, host="0.0.0.0", port=7860)

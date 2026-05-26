@@ -3,8 +3,10 @@ title: MultiGuard
 emoji: 🛡️
 colorFrom: blue
 colorTo: indigo
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 5.9.1
+python_version: "3.12"
+app_file: app.py
 pinned: false
 license: mit
 short_description: 5-class fake-news + binary AI-image (honest-path ensemble)
@@ -13,6 +15,8 @@ short_description: 5-class fake-news + binary AI-image (honest-path ensemble)
 # MultiGuard
 
 Multimodal fake-news detector. 5 classes: Real / Out-of-Context / Manipulated / AI-Text / Fully-Fabricated.
+
+Uses Gradio SDK so ZeroGPU works, but mounts a FastAPI app inside Gradio to serve the same bilingual EN/AR website UI from `static/` at the root of the Space. The Gradio interface itself is hidden at `/gradio`.
 
 ## Numbers (V4 honest-path 3-seed ensemble)
 
