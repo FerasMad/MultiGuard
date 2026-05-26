@@ -127,3 +127,8 @@ outputs/v2/logs/
 
 # Auto-generated knowledge-graph outputs (regenerable via /graphify)
 graphify-out/
+
+# Binary tools (downloaded, not committed)
+tools/cloudflared.exe
+tools/ngrok.exe
+tools/ngrok.zip

@@ -46,20 +46,36 @@ def main():
     p.add_argument("--out-dir", type=Path, default=Path("cache/v4/v_imgfor_dctforensic"))
     p.add_argument("--limit", type=int, default=None, help="Smoke: cap samples")
     p.add_argument("--out-dim", type=int, default=768)
+    p.add_argument("--seed", type=int, default=42,
+                   help="Seed for encoder.head Kaiming init (P9.1 parity fix).")
+    p.add_argument("--head-state-out", type=Path,
+                   default=Path("outputs/v4/dctforensic_head_seed42.pt"),
+                   help="Where to save encoder.head state_dict so the runtime server "
+                        "can reproduce the cache exactly (P9.1 parity fix).")
     args = p.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
+    args.head_state_out.parent.mkdir(parents=True, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[precompute] device: {device}")
     print(f"[precompute] out_dir: {args.out_dir}")
     print(f"[precompute] ckpt: {args.ckpt}")
+    print(f"[precompute] seed: {args.seed}")
 
-    # Build the V4 forensic encoder with the trained Approach 2 weights
+    # Build the V4 forensic encoder with the trained Approach 2 weights.
+    # Seed BEFORE instantiation so head Linear(2048,out_dim) Kaiming init is deterministic.
     import_all()
     EncCls = ENCODER_REGISTRY["dct_forensic_v1"]
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
     enc = EncCls(out_dim=args.out_dim, ckpt=args.ckpt, freeze_backbone=False)
     enc.to(device).eval()
     print(f"[precompute] encoder built: dct_forensic_v1, out_dim={args.out_dim}")
+
+    # Save head state so the live server can reproduce the cache exactly.
+    torch.save(enc.head.state_dict(), args.head_state_out)
+    print(f"[precompute] head state saved -> {args.head_state_out}")
 
     mean, std = load_dct_stats(args.stats)
     print(f"[precompute] dct_stats: mean={mean:.4f} std={std:.4f}")

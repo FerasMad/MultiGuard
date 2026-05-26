@@ -210,7 +210,16 @@ def _build_v4_pipeline():
         p.requires_grad = False
 
     log.info("[V4] building DCT-Forensic encoder (image, 768-d)...")
-    dct_forensic = DctForensicEncoder(out_dim=768, ckpt=dct_ckpt)
+    # P9.1 server-parity fix: pass seed + saved head state for deterministic head Linear init.
+    # The head state file is committed to the repo at outputs/v4/dctforensic_head_seed42.pt
+    # so the HF Space can pull it via the github mirror if needed.
+    head_state_path = HERE.parent.parent.parent / "outputs/v4/dctforensic_head_seed42.pt"
+    dct_forensic = DctForensicEncoder(
+        out_dim=768,
+        ckpt=dct_ckpt,
+        head_state_path=head_state_path if head_state_path.exists() else None,
+        seed=42,
+    )
     dct_forensic.eval()
     for p in dct_forensic.parameters():
         p.requires_grad = False

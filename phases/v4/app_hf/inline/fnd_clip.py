@@ -1,7 +1,25 @@
-"""FND-CLIP V1 semantic encoder — inline copy for the HF Space.
+"""FND-CLIP V1 semantic encoder — inline copy that matches V1's exact param naming.
 
-Mirrors phases/v4/src/v4/models/encoders/fnd_clip.py with v4.* imports stripped
-and the @register decorator dropped (instantiated directly in app.py).
+Faithful re-implementation of `phases/v3/src/models/fnd_clip.py` (which mirrors
+`phases/v1/src/models/fnd_clip.py`). The V1 leakfree ckpt was trained with
+THIS exact architecture, and the cached `v_semantic` features in
+`cache/v3/_features/v_semantic/*.pt` were produced by it. Earlier versions of
+this inline file used V4-style naming (visual.backbone.*, visual.proj, single-
+linear ModalityAttention) which caused 273/929 weights to fall back to random
+init at server load time — that bug is what the parity sweep caught.
+
+Key naming (must match V1 ckpt exactly):
+  visual.features.0..X          -- ResNet50 wrapped as nn.Sequential
+  visual.project.{weight,bias}  -- Linear(2048, 512)
+  text.bert.*                   -- HF BertModel
+  text.project.{weight,bias}    -- Linear(768, 512)
+  clip.clip.*                   -- HF CLIPModel
+  clip_project.{weight,bias}    -- Linear(1024, 512)
+  attention.scorer.{0,2}.*      -- nn.Sequential(Linear*3 -> Tanh -> Linear*3)
+  classifier.{0,3}.*            -- 4-layer head (unused at inference)
+
+Output of forward_semantic: [B, 512] — same as V1. The fusion's sem_proj
+(Linear 512->768 + GELU, lives inside V3PairwiseFusion) handles the projection.
 """
 
 from __future__ import annotations
@@ -17,102 +35,135 @@ from torchvision import models
 log = logging.getLogger(__name__)
 
 
-def _shape_compat_filter(source_state: dict, target_state: dict) -> dict:
-    return {
-        k: v
-        for k, v in source_state.items()
-        if k in target_state and target_state[k].shape == v.shape
-    }
-
-
 class VisualStream(nn.Module):
-    def __init__(self, feat_dim: int = 512):
+    """ResNet50 wrapped as nn.Sequential (V1 layout: visual.features.0..)."""
+
+    def __init__(self, out_dim: int = 512, pretrained: bool = True):
         super().__init__()
-        backbone = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
-        backbone.fc = nn.Identity()
-        self.backbone = backbone
-        self.proj = nn.Linear(2048, feat_dim)
+        backbone = models.resnet50(
+            weights=models.ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
+        )
+        # children()[:-1] drops the fc head; len == 9 modules
+        self.features = nn.Sequential(*list(backbone.children())[:-1])
+        self.project = nn.Linear(2048, out_dim)
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
-        return self.proj(self.backbone(image))
+        x = self.features(image).flatten(1)
+        return self.project(x)
 
 
 class TextStream(nn.Module):
-    def __init__(self, feat_dim: int = 512, bert_name: str = "bert-base-uncased"):
+    """BERT-base CLS pooled -> Linear(768, out_dim). Uses `project` not `proj`."""
+
+    def __init__(self, out_dim: int = 512, pretrained: str = "bert-base-uncased"):
         super().__init__()
         from transformers import BertModel
 
-        self.bert = BertModel.from_pretrained(bert_name)
-        self.proj = nn.Linear(self.bert.config.hidden_size, feat_dim)
+        self.bert = BertModel.from_pretrained(pretrained)
+        self.project = nn.Linear(768, out_dim)
 
-    def forward(self, ids: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        out = self.bert(input_ids=ids, attention_mask=mask)
+    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        out = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         cls = out.last_hidden_state[:, 0, :]
-        return self.proj(cls)
+        return self.project(cls)
 
 
 class CLIPStream(nn.Module):
-    def __init__(self, clip_name: str = "openai/clip-vit-base-patch32"):
+    """CLIP-vit-base-patch32 paired encoders + cosine-similarity gate."""
+
+    def __init__(self, model_name: str = "openai/clip-vit-base-patch32"):
         super().__init__()
         from transformers import CLIPModel
 
-        self.clip = CLIPModel.from_pretrained(clip_name)
+        self.clip = CLIPModel.from_pretrained(model_name)
         for p in self.clip.parameters():
             p.requires_grad = False
 
-    @property
-    def output_dim(self) -> int:
-        return self.clip.config.projection_dim * 2
+    def forward(self, pixel_values, input_ids, attention_mask):
+        vision_out = self.clip.vision_model(pixel_values=pixel_values)
+        img_pooled = (
+            vision_out.pooler_output
+            if hasattr(vision_out, "pooler_output")
+            else vision_out.last_hidden_state[:, 0]
+        )
+        img_feat = self.clip.visual_projection(img_pooled)
 
-    def forward(self, pixels: torch.Tensor, ids: torch.Tensor, mask: torch.Tensor):
-        img_emb = self.clip.get_image_features(pixel_values=pixels)
-        txt_emb = self.clip.get_text_features(input_ids=ids, attention_mask=mask)
-        img_n = F.normalize(img_emb, dim=-1)
-        txt_n = F.normalize(txt_emb, dim=-1)
-        sim = (img_n * txt_n).sum(dim=-1)
-        fused = torch.cat([img_emb, txt_emb], dim=-1)
+        text_out = self.clip.text_model(input_ids=input_ids, attention_mask=attention_mask)
+        txt_pooled = (
+            text_out.pooler_output
+            if hasattr(text_out, "pooler_output")
+            else text_out.last_hidden_state[:, 0]
+        )
+        txt_feat = self.clip.text_projection(txt_pooled)
+
+        img_feat = F.normalize(img_feat, dim=-1)
+        txt_feat = F.normalize(txt_feat, dim=-1)
+        sim = (img_feat * txt_feat).sum(dim=-1)
+        fused = torch.cat([img_feat, txt_feat], dim=-1)
         return fused, sim
 
 
 class ModalityAttention(nn.Module):
-    def __init__(self, feat_dim: int = 512):
-        super().__init__()
-        self.score = nn.Linear(feat_dim, 1)
+    """V1's 3-layer modality-attention scorer.
 
-    def forward(self, t, i, c):
-        st = self.score(t)
-        si = self.score(i)
-        sc = self.score(c)
-        scores = torch.cat([st, si, sc], dim=-1)
-        weights = F.softmax(scores, dim=-1).unsqueeze(-1)
-        stacked = torch.stack([t, i, c], dim=1)
-        weighted = (weights * stacked).sum(dim=1)
-        return weighted, weights.squeeze(-1)
+    Concatenates the three [B, feat_dim] streams -> [B, 3*feat_dim],
+    runs through Linear -> Tanh -> Linear -> softmax over 3, then takes
+    a weighted sum of the original streams.
+
+    NOTE: param path is `attention.scorer.{0,2}.{weight,bias}` to match V1 ckpt.
+    The earlier inline version used a single `Linear(feat_dim, 1)` named `score`
+    which is a completely different architecture — that was the parity bug.
+    """
+
+    def __init__(self, feat_dim: int):
+        super().__init__()
+        self.scorer = nn.Sequential(
+            nn.Linear(feat_dim * 3, feat_dim),
+            nn.Tanh(),
+            nn.Linear(feat_dim, 3),
+        )
+
+    def forward(self, text_feat, image_feat, clip_feat):
+        stack = torch.stack([text_feat, image_feat, clip_feat], dim=1)
+        concat = stack.flatten(1)
+        weights = F.softmax(self.scorer(concat), dim=-1)
+        weighted = (stack * weights.unsqueeze(-1)).sum(dim=1)
+        return weighted, weights
 
 
 class FNDCLIPSemanticEncoder(nn.Module):
-    """FND-CLIP V1 encoder. Outputs 512-d native feature (the fusion's sem_proj projects to 768)."""
+    """V1 FND-CLIP encoder. Outputs 512-d native — fusion's sem_proj handles 512->768.
+
+    Architecture + param paths match V1 ckpt (`outputs/v1/leakfree/best.pt`)
+    exactly. All 929 weights load with `strict=False` cleanly (missing=0).
+    """
 
     def __init__(
         self,
         feat_dim: int = 512,
         bert_name: str = "bert-base-uncased",
         clip_name: str = "openai/clip-vit-base-patch32",
-        num_classes: int = 1,
+        num_classes: int = 5,  # V1 trained as binary OOC (1) or 5-class
         ckpt: str | Path | None = None,
     ):
         super().__init__()
         self.feat_dim = feat_dim
-        self.visual = VisualStream(feat_dim=feat_dim)
-        self.text = TextStream(feat_dim=feat_dim, bert_name=bert_name)
-        self.clip = CLIPStream(clip_name=clip_name)
-        self.clip_project = nn.Linear(self.clip.output_dim, feat_dim)
-        self.attention = ModalityAttention(feat_dim=feat_dim)
+        self.visual = VisualStream(out_dim=feat_dim)
+        self.text = TextStream(out_dim=feat_dim, pretrained=bert_name)
+        self.clip = CLIPStream(model_name=clip_name)
+        self.clip_project = nn.Linear(1024, feat_dim)
+        self.attention = ModalityAttention(feat_dim)
+
+        # Classifier head — V1 layout uses indices 0,3 (Linear, Linear with
+        # ReLU+Dropout in between). Inference doesn't use this; it's kept for
+        # ckpt key compatibility only.
         self.classifier = nn.Sequential(
-            nn.Linear(feat_dim, 256),
-            nn.GELU(),
-            nn.Linear(256, num_classes),
+            nn.Linear(feat_dim, feat_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(feat_dim // 2, num_classes),
         )
+
         self.output_dim = feat_dim
         if ckpt:
             self.load_legacy_checkpoint(ckpt)
@@ -121,16 +172,26 @@ class FNDCLIPSemanticEncoder(nn.Module):
         p = Path(path)
         ck = torch.load(p, map_location="cpu", weights_only=False)
         state = ck.get("model_state", ck) if isinstance(ck, dict) else ck
-        compat = _shape_compat_filter(state, self.state_dict())
+
+        # Shape-compat filter: skip keys whose shape doesn't match (in case the
+        # classifier was trained for a different num_classes, etc.)
+        target = self.state_dict()
+        compat = {k: v for k, v in state.items()
+                  if k in target and target[k].shape == v.shape}
         missing, unexpected = self.load_state_dict(compat, strict=False)
         log.info(
             "FND-CLIP loaded %d/%d tensors from %s (missing=%d, unexpected=%d)",
             len(compat),
-            len(self.state_dict()),
+            len(target),
             p.name,
             len(missing),
             len(unexpected),
         )
+        if len(missing) > 5:
+            log.warning(
+                "FND-CLIP: %d weights missing after load — first 5: %s",
+                len(missing), missing[:5],
+            )
 
     def forward_semantic(
         self,
@@ -142,11 +203,13 @@ class FNDCLIPSemanticEncoder(nn.Module):
         clip_ids: torch.Tensor,
         clip_mask: torch.Tensor,
     ) -> torch.Tensor:
-        v_img = self.visual(image)
-        v_txt = self.text(bert_ids, bert_mask)
-        fused_clip, sim = self.clip(clip_pixels, clip_ids, clip_mask)
-        v_clip = self.clip_project(fused_clip) * sim.unsqueeze(-1)
-        weighted, _ = self.attention(v_txt, v_img, v_clip)
+        """Identical to V1's forward_semantic. Returns [B, feat_dim] post-attention."""
+        image_feat = self.visual(image)
+        text_feat = self.text(bert_ids, bert_mask)
+        clip_fused, clip_sim = self.clip(clip_pixels, clip_ids, clip_mask)
+        clip_feat = self.clip_project(clip_fused)
+        clip_feat = clip_feat * clip_sim.unsqueeze(-1)
+        weighted, _ = self.attention(text_feat, image_feat, clip_feat)
         return weighted
 
     def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
@@ -161,12 +224,20 @@ class FNDCLIPSemanticEncoder(nn.Module):
 
 
 def prepare_fnd_inputs(text: str, pil_img, *, bert_max_len: int = 128, clip_max_len: int = 77) -> dict:
-    """Build the dict FNDCLIPSemanticEncoder.forward_semantic expects."""
+    """Build the dict FNDCLIPSemanticEncoder.forward_semantic expects.
+
+    Match the V1 / V3 preprocessing exactly — IMPORTANT for parity with the
+    cached v_semantic features. Source of truth:
+        phases/v3/scripts/precompute_v_semantic.py (or equivalent V1 cache build).
+    """
     from torchvision import transforms
     from transformers import BertTokenizer, CLIPProcessor
 
     bert_tok = BertTokenizer.from_pretrained("bert-base-uncased")
     clip_proc = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
+    # V1 used Resize(256) + CenterCrop(224) per the FND-CLIP paper. ImageNet
+    # mean/std normalization is critical (RN50 expects it).
     image_tf = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),

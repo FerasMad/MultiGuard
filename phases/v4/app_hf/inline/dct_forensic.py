@@ -48,8 +48,20 @@ class DctForensicEncoder(nn.Module):
         ckpt: str | Path | None = None,
         freeze_backbone: bool = False,
         head_dropout: float = 0.3,
+        head_state_path: str | Path | None = None,
+        seed: int | None = None,
     ):
         super().__init__()
+
+        # P9.1 server-parity fix: optionally seed BEFORE init so head Kaiming
+        # init is reproducible. If a saved head_state_path is provided, load
+        # it AFTER init to bit-exactly match the cache.
+        if seed is not None:
+            import torch as _torch
+            _torch.manual_seed(seed)
+            if _torch.cuda.is_available():
+                _torch.cuda.manual_seed_all(seed)
+
         weights = models.ResNet50_Weights.IMAGENET1K_V1
         backbone = models.resnet50(weights=weights)
         backbone.conv1 = _make_1ch_conv1(backbone.conv1)
@@ -67,9 +79,25 @@ class DctForensicEncoder(nn.Module):
         if ckpt is not None:
             self.load_forensic_ckpt(ckpt)
 
+        if head_state_path is not None:
+            self.load_head_state(head_state_path)
+
         if freeze_backbone:
             for p in self.backbone.parameters():
                 p.requires_grad = False
+
+    def load_head_state(self, path: str | Path) -> None:
+        """Load encoder.head weights from a sidecar .pt (P9.1 server-parity fix)."""
+        p = Path(path)
+        if not p.exists():
+            log.warning("head state not found at %s; using current Kaiming init", p)
+            return
+        state = torch.load(p, map_location="cpu", weights_only=False)
+        missing, unexpected = self.head.load_state_dict(state, strict=False)
+        log.info(
+            "DctForensicEncoder.head loaded %s (missing=%d, unexpected=%d)",
+            p.name, len(missing), len(unexpected),
+        )
 
     def load_forensic_ckpt(self, path: str | Path) -> None:
         p = Path(path)
