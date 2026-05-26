@@ -1,52 +1,36 @@
 ---
-title: MultiGuard — Forensic + 5-class Fake-News Detector
+title: MultiGuard
 emoji: 🛡️
 colorFrom: blue
 colorTo: indigo
-sdk: gradio
-sdk_version: 5.9.1
-python_version: "3.12"
-app_file: app.py
+sdk: docker
+app_port: 7860
 pinned: false
 license: mit
-short_description: V4 5-class fake-news + two forensic image detectors
+short_description: 5-class fake-news + binary AI-image (honest-path ensemble)
 ---
 
-# MultiGuard — live demo
+# MultiGuard
 
-Three tabs in one Space:
+Multimodal fake-news detector. 5 classes: Real / Out-of-Context / Manipulated / AI-Text / Fully-Fabricated.
 
-| Tab | What it does | Model |
-|-----|--------------|-------|
-| **Forensic A1** | RGB + Fourier-mask binary fake-image detector | `FerasMad/forensic-rgb-v1` (ResNet50, ~260 MB) |
-| **Forensic A2** | Dual-DCT (8x8 + 16x16) binary fake-image detector | `FerasMad/forensic-dct-v1` (ResNet50 + 1-ch conv1, ~270 MB) |
-| **V4 5-class** | Multimodal Real / OOC / Manipulated / AI-Text / Fully-Fabricated | FND-CLIP + DCT forensic + Qwen2-7B-Instruct + V3 pairwise fusion |
+## Numbers (V4 honest-path 3-seed ensemble)
 
-## What's inside
+| Config | Test F1 | MMFakeBench transfer F1 |
+|---|---|---|
+| 3-seed mean +/- std | 0.7117 +/- 0.0095 | 0.3757 +/- 0.0479 |
+| Ensemble (softmax avg) | **0.7149** | 0.4308 |
+| Ensemble + bias correction | 0.7149 | **0.7197** |
 
-- Two forensic image detectors implemented per the doctor's brief
-  (`Forensic_Image_Detector_En.pdf`). Both pass the per-generator AP/Acc/AUC
-  evaluation. Approach 1 is more consistent, Approach 2 is more interpretable.
-- V4 5-class detector is the V3.1-spec multimodal fusion pipeline retrained
-  with the new DCT forensic encoder; val F1-macro = 0.7334, test F1-macro =
-  0.7267, MMFakeBench transfer F1-macro = 0.4805.
+## Stack
 
-The V4 5-class tab pulls Qwen2-7B-Instruct on first call (~15 GB) and runs
-on Spaces ZeroGPU (A100). First load ~30 s; subsequent calls ~5 s. The two
-forensic tabs run on CPU and respond in well under a second.
+- FND-CLIP V1 semantic (`FerasMad/multiguard-v1-fndclip`)
+- DCT-Forensic image (`FerasMad/forensic-dct-v1`) + P9.1 parity head
+- Qwen2-7B-Instruct text
+- V3PairwiseFusion + MLP (3 seeds from `FerasMad/multiguard-v4-honest`)
 
-For full repo + training scripts + checkpoints + reports see
-[`FerasMad/MultiGuard`](https://github.com/FerasMad/MultiGuard).
+## API
 
-## Honest limitations
+`POST /api/analyze` with multipart `text` + `image` -> verdict + probabilities (EN/AR).
 
-- V4 5-class is single-seed (42); the multi-seed and fresh Stage-0 sweep
-  is deferred to a real GPU.
-- The Class 3 / Class 4 captions in the V3-era text cache contain a partial
-  shortcut, so those two classes are near-perfect at test time; treat with
-  appropriate skepticism.
-- Both forensic detectors were trained with VisualNews-as-nature (no
-  ImageNet "nature"); the MMFakeBench OOD AP collapses outside the
-  training distribution, see the report for details.
-
-Built by Feras Madkhali. Model + data + code released under MIT.
+Repo: https://github.com/FerasMad/MultiGuard

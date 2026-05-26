@@ -1,13 +1,14 @@
-# Pinned for HF Spaces compatibility (2026-05-26):
-#   - gradio 5.x dropped the HfFolder import (works with new huggingface_hub)
-#   - huggingface_hub >=0.30 to match gradio 5.x and ZeroGPU's `spaces`
+# HF Space Docker SDK -- FastAPI + ZeroGPU
 torch>=2.4.0
 torchvision>=0.19.0
 transformers>=4.45.0,<5.0
 accelerate>=0.34.0
 huggingface_hub>=0.30.0
-gradio>=5.0.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
 pillow>=10.2.0
 numpy>=1.26,<2.0
 scipy>=1.13.0
+opencv-python-headless>=4.9.0
 spaces
