@@ -263,7 +263,6 @@ with gr.Blocks(analytics_enabled=False) as demo:
 
 app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
 
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+# HF Spaces Gradio SDK launches the mounted FastAPI via `app` at module level.
+# Do NOT add an `if __name__ == "__main__"` uvicorn block here; it conflicts
+# with HF's runner and triggers an immediate shutdown.
