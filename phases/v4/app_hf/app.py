@@ -155,15 +155,14 @@ def _ensemble_predict(pil_img: Image.Image, text: str) -> list[float]:
 
 
 @spaces.GPU(duration=120)
-def analyze(image, text, lang):
+def analyze(image, text):
     """Gradio handler -- ZeroGPU is allocated for this function's duration.
     Returns: (verdict_html, probs_html, modules_html)."""
+    lang = "en"
     if not text or not text.strip():
-        msg = "الرجاء إدخال نص الخبر" if lang == "ar" else "Please enter article text"
-        return _error_html(msg), "", ""
+        return _error_html("Please enter article text"), "", ""
     if image is None:
-        msg = "الرجاء رفع صورة" if lang == "ar" else "Please upload an image"
-        return _error_html(msg), "", ""
+        return _error_html("Please upload an image"), "", ""
 
     try:
         pil_img = image if isinstance(image, Image.Image) else Image.fromarray(image)
@@ -321,7 +320,6 @@ def main():
 
     with gr.Blocks(css=CSS, title="MultiGuard", theme=gr.themes.Default(primary_hue="indigo")) as demo:
         gr.HTML(HEADER_HTML)
-        lang_state = gr.State("en")
 
         with gr.Row():
             text_in = gr.Textbox(
@@ -361,7 +359,7 @@ def main():
 
         submit_btn.click(
             fn=analyze,
-            inputs=[image_in, text_in, lang_state],
+            inputs=[image_in, text_in],
             outputs=[verdict_out, probs_out, modules_out],
             api_name="analyze",
         )
