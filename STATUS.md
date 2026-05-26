@@ -72,15 +72,28 @@ considered for live deployment.
   3. Phases 4-5 — 3-seed Stage 2 retrain on the new caches (`outputs/v4/stage2_fusion_honest_seed{42,1337,2024}/best.pt`).
   4. Phase 6 — softmax ensemble + temperature calibration (T=1.454).
 
-  | Metric | Old ckpt (shortcut) | Honest seed=42 | 3-seed mean ± std | Ensemble |
-  |---|---|---|---|---|
-  | Test F1-macro | 0.7267 | 0.7152 | **0.7117 ± 0.0095** | **0.7149** |
-  | MMFakeBench transfer F1-macro | 0.4805 | 0.3516 | **0.3757 ± 0.0479** | **0.4308** |
+  | Metric | Old ckpt (shortcut) | Honest seed=42 | 3-seed mean ± std | Ensemble | Ensemble + biascorr |
+  |---|---|---|---|---|---|
+  | Test F1-macro | 0.7267 | 0.7152 | **0.7117 ± 0.0095** | 0.7149 | **0.7149** |
+  | MMFakeBench transfer F1-macro | 0.4805 | 0.3516 | **0.3757 ± 0.0479** | 0.4308 | **0.7197** |
 
   Per-class test F1 (ensemble): 0=0.397, 1=0.442, 2=0.757, 3=**0.989**, 4=**0.990**.
   The ~1 pp drop on classes 3/4 (0.997 → 0.989 / 0.998 → 0.990) confirms the syntactic
-  shortcut was real and is now removed. Classes 0/1 stayed roughly the same (V1 leakfree
-  FND-CLIP kept after fresh Stage 0 attempt converged to a local min).
+  shortcut was real and is now removed.
+
+  **Bias-corrected transfer F1 = 0.7197 (+28.9 pp).** P10.1 added log-prior shift
+  (Menon et al. 2021) on top of the ensemble: subtract `log p_train(y)`, add
+  `log p_transfer(y)` to each row's log-probs before argmax. Because MMFakeBench
+  transfer is 98.6% class 3 + 1.4% class 2, the correction suppresses false class
+  0/1/4 predictions and lifts macro-F1 to 0.7197 on the present classes. Test F1
+  is unchanged because the test prior already matches train. See
+  `phases/v4/scripts/eval_ensemble_biascorr.py`.
+
+  Stage-0 fresh FND-CLIP attempt was prematurely terminated at epoch 5 (val
+  F1=0.67, AUC=0.66) while still actively learning — saved as
+  `outputs/v4/stage0_fndclip/latest.pt`. The continued retry runs from this
+  checkpoint at lr=5e-5 for 15 more epochs in `outputs/v4/stage0_fndclip_v2/`
+  (P10.2, overnight). Status documented in HONEST_RUN_REPORT.md.
 - Trained from `phases/v4/configs/v4_pipeline_honest.yaml`. Full report:
   `docs/HONEST_RUN_REPORT.md` + raw JSON: `phases/v4/docs/eval/honest_run_summary.json`.
 
