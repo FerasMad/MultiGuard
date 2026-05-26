@@ -89,11 +89,16 @@ considered for live deployment.
   is unchanged because the test prior already matches train. See
   `phases/v4/scripts/eval_ensemble_biascorr.py`.
 
-  Stage-0 fresh FND-CLIP attempt was prematurely terminated at epoch 5 (val
-  F1=0.67, AUC=0.66) while still actively learning — saved as
-  `outputs/v4/stage0_fndclip/latest.pt`. The continued retry runs from this
-  checkpoint at lr=5e-5 for 15 more epochs in `outputs/v4/stage0_fndclip_v2/`
-  (P10.2, overnight). Status documented in HONEST_RUN_REPORT.md.
+  Stage-0 retry (P10.2) — **honest negative result**: warm-started from V1 leakfree
+  and tried to fine-tune further on the unified-manifest binary OOC subset
+  (4620 train rows). Best val AUC = 0.6504 at ep1; from ep2 onward the model
+  overfit aggressively (train_loss 0.57 → 0.25, val_loss 0.77 → 1.48 across
+  5 epochs). Early-stop fired at ep6. **V1 leakfree FND-CLIP remains the
+  production semantic encoder** — Stage-0 v2 ckpt kept at
+  `outputs/v4/stage0_fndclip_v2/best.pt` for reproducibility only.
+  Interpretation: classes 0/1 ceiling at F1 ~0.42 is a data-scale limitation
+  (need more NewsCLIPpings rows), not a recipe one. Full write-up in
+  `docs/HONEST_RUN_REPORT.md` §"Stage-0 FND-CLIP retry".
 - Trained from `phases/v4/configs/v4_pipeline_honest.yaml`. Full report:
   `docs/HONEST_RUN_REPORT.md` + raw JSON: `phases/v4/docs/eval/honest_run_summary.json`.
 

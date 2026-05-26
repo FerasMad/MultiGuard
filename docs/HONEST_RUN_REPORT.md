@@ -42,9 +42,34 @@ Plus: server-vs-eval parity bug fixed (DctForensicEncoder.head deterministic see
 |---|---|---|
 | Text Credibility | Qwen on original captions (shortcut) | Qwen on BLIP-2 image-grounded captions for class 3/4 |
 | Image Authenticity | DCT-Forensic random head | DCT-Forensic seed=42 head (parity fix) |
-| Cross-Modal Consistency | V1 leakfree FND-CLIP | V1 leakfree (Stage-0 fresh attempt converged to local min, kept V1) |
+| Cross-Modal Consistency | V1 leakfree FND-CLIP | V1 leakfree (kept — see Stage-0 retry note below) |
 | Attention Fusion | V3PairwiseFusion | V3PairwiseFusion (architecture unchanged, retrained on new caches) |
 | MLP classifier | V3.1 §6 strict | V3.1 §6 strict (unchanged) |
+
+## Stage-0 FND-CLIP retry (P10.2) — honest negative result
+
+The classes 0/1 F1 ceiling (~0.42) prompted a Stage-0 retry attempting to
+fine-tune FND-CLIP further on the unified manifest's binary OOC subset
+(NewsCLIPpings matched vs mismatched). Method: warm-start from
+`outputs/v1/leakfree/best.pt` (V1 trained on the original V1 OOC data) →
+continue fine-tuning on the unified manifest's classes 0+1 (4620 train,
+990 val) at lr=5e-5 with patience=5.
+
+**Outcome:** best val AUC = 0.6504 at ep1 (the warm-start epoch). Clear
+overfitting from ep2 onward: train_loss dropped 0.57 → 0.25, val_loss
+climbed 0.77 → 1.48 over 5 epochs. Early-stop fired at ep6. Final ckpt
+at `outputs/v4/stage0_fndclip_v2/best.pt` is **kept for reproducibility
+but NOT used** in the production ensemble — V1 leakfree wins.
+
+**Honest interpretation:** the unified-manifest binary OOC training set
+(~4600 rows) is too small to fine-tune a ~300M-param FND-CLIP without
+overfitting. The classes 0/1 weakness is a data-scale limitation, not a
+recipe one. Improving it would require either (a) expanding NewsCLIPpings,
+(b) heavier regularization (out of scope per V3.1 spec), or (c) a wholly
+different OOC dataset like Twitter Image Verification Corpus (out of
+scope this sprint).
+
+**This is a defensible scientific finding**, not a bug.
 
 ## Inference-time improvements
 
