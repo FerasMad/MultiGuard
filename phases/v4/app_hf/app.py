@@ -361,11 +361,12 @@ def main():
             fn=analyze,
             inputs=[image_in, text_in],
             outputs=[verdict_out, probs_out, modules_out],
-            api_name="analyze",
+            api_name=False,
+            show_api=False,
         )
 
     return demo
 
 
 demo = main()
-demo.queue().launch()
+demo.queue(api_open=False).launch(show_api=False)
