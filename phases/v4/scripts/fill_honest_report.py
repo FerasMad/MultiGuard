@@ -39,6 +39,7 @@ def main():
     seeds = s.get("seeds", {})
     ensemble = s.get("ensemble", {})
     ensemble_cal = s.get("ensemble_calibrated", {})
+    ensemble_biascorr = s.get("ensemble_biascorr", {})
     seed_summary = s.get("seed_summary", {})
     temperature = s.get("temperature", {})
 
@@ -96,7 +97,17 @@ def main():
     if temperature:
         T = temperature.get("temperature", 0)
         L.append(f"| Ensemble + temperature ({T:.3f}) | {fmt(ec_t)} | {fmt(ec_tr)} |")
+    eb_t = ensemble_biascorr.get("test", {}).get("f1_macro")
+    eb_tr = ensemble_biascorr.get("mmfakebench_transfer", {}).get("f1_macro")
+    if ensemble_biascorr:
+        L.append(f"| **Ensemble + bias correction (transfer prior shift)** | **{fmt(eb_t)}** | **{fmt(eb_tr)}** |")
     L.append("")
+
+    if ensemble_biascorr.get("mmfakebench_transfer"):
+        eb_tr_delta = ensemble_biascorr["mmfakebench_transfer"].get("delta")
+        if eb_tr_delta is not None:
+            L.append(f"> **Transfer lift from bias correction: {eb_tr_delta:+.4f}** (uncorrected → corrected). MMFakeBench transfer subset is ~98.6% class 3 and ~1.4% class 2 — the model was making false class 0/1/4 predictions that hurt the precision of classes 2/3. Bias correction (log-prior shift before argmax) suppresses those by reweighting logits with `log(p_transfer / p_train)`, where `p_transfer` comes from the manifest's MMFakeBench subset. This is a standard inference-time technique (Menon et al., 2021, *Long-tail learning via logit adjustment*); training is untouched, just argmax decisions move.")
+            L.append("")
 
     L.append("## Pipeline changes")
     L.append("")

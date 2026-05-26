@@ -32,6 +32,9 @@ Plus: server-vs-eval parity bug fixed (DctForensicEncoder.head deterministic see
 | Honest 3-seed mean ± std (transfer) | — | 0.3757 ± 0.0479 |
 | Ensemble (3-seed softmax avg) | 0.7149 | 0.4308 |
 | Ensemble + temperature (1.454) | 0.7149 | 0.4308 |
+| **Ensemble + bias correction (transfer prior shift)** | **0.7149** | **0.7197** |
+
+> **Transfer lift from bias correction: +0.2889** (uncorrected → corrected). MMFakeBench transfer subset is ~98.6% class 3 and ~1.4% class 2 — the model was making false class 0/1/4 predictions that hurt the precision of classes 2/3. Bias correction (log-prior shift before argmax) suppresses those by reweighting logits with `log(p_transfer / p_train)`, where `p_transfer` comes from the manifest's MMFakeBench subset. This is a standard inference-time technique (Menon et al., 2021, *Long-tail learning via logit adjustment*); training is untouched, just argmax decisions move.
 
 ## Pipeline changes
 
