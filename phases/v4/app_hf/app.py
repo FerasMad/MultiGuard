@@ -43,7 +43,12 @@ import spaces
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 log = logging.getLogger("multiguard")
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# ZeroGPU note: CUDA is NOT available at module import / startup time.
+# It only becomes available inside @spaces.GPU functions. Therefore we build
+# the pipeline on CPU and move tensors+models to "cuda" inside the
+# decorated _ensemble_predict (the .to('cuda') call is idempotent so this
+# is cheap on subsequent calls within the same ZeroGPU window).
+GPU_DEVICE = torch.device("cuda")
 
 LABELS_AR = {
     0: "حقيقي",
@@ -85,25 +90,25 @@ def _build_pipeline():
         repo_id="FerasMad/multiguard-v4-honest", filename="dctforensic_head_seed42.pt",
     )
 
-    log.info("[build] FND-CLIP semantic encoder ...")
-    fndclip = FNDCLIPSemanticEncoder(ckpt=fndclip_ckpt).to(DEVICE).eval()
+    log.info("[build] FND-CLIP semantic encoder (CPU; moved to GPU inside @spaces.GPU) ...")
+    fndclip = FNDCLIPSemanticEncoder(ckpt=fndclip_ckpt).eval()
     for p in fndclip.parameters():
         p.requires_grad = False
 
-    log.info("[build] DCT-Forensic encoder (with P9.1 parity head) ...")
+    log.info("[build] DCT-Forensic encoder with P9.1 parity head (CPU) ...")
     dct_forensic = DctForensicEncoder(
         out_dim=768,
         ckpt=dct_ckpt,
         head_state_path=dct_head_state,
         seed=42,
-    ).to(DEVICE).eval()
+    ).eval()
     for p in dct_forensic.parameters():
         p.requires_grad = False
 
-    log.info("[build] Qwen2-7B-Instruct (lazy load on first call) ...")
+    log.info("[build] Qwen2-7B-Instruct (lazy load on first @spaces.GPU call) ...")
     qwen = Qwen2TextEncoder(load_backbone=False)
 
-    log.info("[build] 3-seed V3PairwiseFusion ensemble ...")
+    log.info("[build] 3-seed V3PairwiseFusion ensemble (CPU) ...")
     fusions = []
     for ck_path in seed_ckpts:
         fusion = V3PairwiseFusion(
@@ -111,8 +116,8 @@ def _build_pipeline():
             fused_dim=1024,
             num_classes=5,
             proj_dims={"v_semantic": 512, "v_textfor": 3584},
-        ).to(DEVICE).eval()
-        payload = torch.load(ck_path, map_location=DEVICE, weights_only=False)
+        ).eval()
+        payload = torch.load(ck_path, map_location="cpu", weights_only=False)
         state = payload.get("model_state", payload) if isinstance(payload, dict) else payload
         fusion.load_state_dict(state, strict=False)
         for p in fusion.parameters():
@@ -120,7 +125,8 @@ def _build_pipeline():
         fusions.append(fusion)
 
     stats_obj = json.loads(Path(dct_stats).read_text(encoding="utf-8"))
-    log.info("[build] pipeline ready in %.1fs (device=%s)", time.time() - t0, DEVICE)
+    log.info("[build] pipeline ready in %.1fs (CPU; will move to cuda per request)",
+             time.time() - t0)
     return {
         "fndclip": fndclip,
         "dct_forensic": dct_forensic,
@@ -133,18 +139,28 @@ def _build_pipeline():
 
 @spaces.GPU(duration=120)
 def _ensemble_predict(pil_img: Image.Image, text: str) -> list[float]:
-    """3-seed softmax-average ensemble. Returns 5-vector of probabilities."""
+    """3-seed softmax-average ensemble. Returns 5-vector of probabilities.
+
+    Inside the @spaces.GPU window CUDA is available. Move models to GPU
+    (idempotent after first call) and run inference there.
+    """
+    gpu = torch.device("cuda")
+    _state["fndclip"].to(gpu)
+    _state["dct_forensic"].to(gpu)
+    for fusion in _state["fusions"]:
+        fusion.to(gpu)
+
     fnd_batch = prepare_fnd_inputs(text, pil_img)
-    fnd_batch = {k: v.to(DEVICE) for k, v in fnd_batch.items()}
+    fnd_batch = {k: v.to(gpu) for k, v in fnd_batch.items()}
 
     t = compute_dual_dct(pil_img)
     t = (t - _state["dct_mean"]) / (_state["dct_std"] + 1e-8)
-    t = t.unsqueeze(0).to(DEVICE)
+    t = t.unsqueeze(0).to(gpu)
 
     with torch.no_grad():
         v_semantic = _state["fndclip"](fnd_batch)
         v_imgfor = _state["dct_forensic"]({"v_imgfor_dct": t})
-        v_textfor = _state["qwen"].encode_text(text).to(DEVICE)
+        v_textfor = _state["qwen"].encode_text(text).to(gpu)
 
         feats = {"v_semantic": v_semantic, "v_imgfor": v_imgfor, "v_textfor": v_textfor}
         probs_list = []
@@ -174,7 +190,7 @@ async def _startup() -> None:
 async def health() -> dict:
     return {
         "status": "ok",
-        "device": str(DEVICE),
+        "device": "zero-gpu (cuda allocated per /api/analyze call)",
         "spec_version": "V3.1 honest-path",
         "ensemble_seeds": [42, 1337, 2024],
         "val_f1_macro_mean": 0.7292,
