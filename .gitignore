@@ -124,3 +124,6 @@ outputs/v3/univfd_genimage/
 outputs/v2/full_run_*/
 outputs/v2/pipeline_run_*/
 outputs/v2/logs/
+
+# Auto-generated knowledge-graph outputs (regenerable via /graphify)
+graphify-out/

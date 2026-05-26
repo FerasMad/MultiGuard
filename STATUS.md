@@ -3,6 +3,17 @@
 > Single entry-point for the doctor + future contributors. Mirrors current
 > on-disk state; manually refreshed as work lands.
 
+## Live demo (HF Spaces)
+
+🔗 **https://huggingface.co/spaces/FerasMad/multiguard-demo**
+
+Three tabs in one Gradio app: Forensic A1 (RGB+Fourier), Forensic A2 (Dual-DCT), and
+V4 5-class fake-news. Forensic tabs work on CPU. The V4 tab requires GPU; on CPU-basic
+it gracefully degrades to the static eval numbers from `phases/v4/docs/eval/seed42/`.
+
+For the box-to-file mapping of the doctor's architecture diagram see
+[`docs/PIPELINE.md`](docs/PIPELINE.md).
+
 ---
 
 ## TL;DR

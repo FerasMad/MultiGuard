@@ -1,0 +1,13 @@
+# HF Spaces will download checkpoints to .ckpts/ at runtime — don't ship them
+.ckpts/
+
+# Gradio cache
+flagged/
+gradio_cached_examples/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local dev artifacts
+.DS_Store
