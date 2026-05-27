@@ -237,6 +237,37 @@ within +/-1pp. Text branch is the dominant contributor (+4.2pp); image branch
 adds +2.9pp alone but only +0.54pp on top of text. Image owns class 2 signal;
 text owns class 3/4 signal -- both branches doing the job V3.1 spec assigned.
 
+## P15 -- Codex-flagged review: honest-path v2 + leave-one-out ablation
+
+Codex spotted that the P14 "honest path" was only half-honest: `v_semantic`
+cache was built from the original LLM-syntactic-fingerprint text on 2026-05-18
+and never regenerated after the BLIP-2 caption rewrite on 2026-05-26.
+FND-CLIP's BERT sub-encoder kept seeing the shortcut for all 6,600 cls 3/4
+rows. Plus four smaller issues. All five are now closed:
+
+| ID | Item | Outcome |
+|---|---|---|
+| **P15.1** | Re-encoded v_semantic for cls 3/4 from BLIP-2 captions + retrained Stage 2 (seed=42) on fresh cache | v2 ckpt at `outputs/v4/stage2_fusion_honest_v2_seed42/best.pt`. **Test F1 0.7149 (vs shipped 0.7152)**. Per-class redistribution: **C3 -1.6 pp, C4 -1.4 pp (shortcut removed), C0 +9.1 pp (Real recognition unblocked)**. Best val F1 0.7270 @ ep 4 (vs shipped 0.7372 @ ep 12). |
+| **P15.2** | Inference-time leave-one-out ablation on shipped 3-seed ensemble | **Text branch dominates**: removing it costs 26.6 pp F1 (C3 collapses 0.989 -> 0.055). Image branch only 2 pp. Semantic-only F1 = 0.31. P14's "fresh-train" ablation overstated FND-CLIP's runtime contribution by conflating it with training-time information content. |
+| **P15.3** | Drop train/test image_path overlaps from test split | **Negligible** -- 16 leaks change F1 by <0.001 across all variants. Shipped 0.7149 is honest at 4 decimal places. |
+| **P15.4** | Aux loss handling under `disable_branches` | Patched: emits zero `aux_logits` when v_imgfor disabled (no more degenerate bias-only gradient). 45 phases/v4 tests stay green. |
+| **P15.5** | Sync inline `v3_pairwise.py` to FerasMad/multiguard-demo Space | `huggingface_hub.upload_file` -- Space inline copy no longer drifts from repo. |
+
+**Headline (3-seed shipped ensemble, inference-time leave-one-out):**
+
+| Variant | Test F1 | C0 | C1 | C2 | C3 | C4 |
+|---|---|---|---|---|---|---|
+| Full pipeline | **0.7149** | 0.397 | 0.442 | 0.757 | 0.989 | 0.990 |
+| `disable=[v_imgfor]` | 0.6954 (-2.0 pp) | 0.349 | 0.428 | 0.733 | 0.983 | 0.984 |
+| `disable=[v_textfor]` | 0.4494 (**-26.6 pp**) | 0.401 | 0.247 | 0.710 | **0.055** | 0.834 |
+| `disable=[both]` | 0.3146 (-40 pp) | 0.362 | 0.040 | 0.655 | 0.040 | 0.476 |
+
+The V3.1 pipeline's classes 3/4 detection is **almost entirely Qwen-driven**;
+FND-CLIP semantic is mostly an OOC signal (A1-confirmed data-scale ceiling).
+Image branch is a modest +2 pp contributor anchored to cls 2.
+
+Full write-up in `docs/HONEST_PATH_V2_REPORT.md`.
+
 ### Stage C-lite -- band='all' Approach 1 retrain (COMPLETED)
 
 Single retrain experiment to empirically settle the F-A8 deviation. Trained
