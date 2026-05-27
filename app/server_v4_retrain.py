@@ -32,7 +32,7 @@ from PIL import Image
 ROOT = Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(ROOT / "phases" / "v4" / "app_hf"))
 
-from inline.class_map import LABELS, LABEL_EXPLANATIONS  # noqa: E402
+from inline.class_map import LABEL_EXPLANATIONS, LABELS  # noqa: E402
 from inline.dct_forensic import DctForensicEncoder  # noqa: E402
 from inline.dual_dct import compute_dual_dct  # noqa: E402
 from inline.fnd_clip import FNDCLIPSemanticEncoder, prepare_fnd_inputs  # noqa: E402
@@ -87,8 +87,12 @@ def _build_pipeline():
         "MULTIGUARD_DCT_HEAD_STATE", "outputs/v4/dctforensic_head_seed42.pt"
     )
 
-    for label, p in [("fndclip", fndclip_ckpt), ("dct", dct_ckpt),
-                     ("dct_stats", dct_stats), ("fusion", fusion_ckpt)]:
+    for label, p in [
+        ("fndclip", fndclip_ckpt),
+        ("dct", dct_ckpt),
+        ("dct_stats", dct_stats),
+        ("fusion", fusion_ckpt),
+    ]:
         if not p.exists():
             raise FileNotFoundError(f"{label} ckpt not found at {p}")
 
@@ -101,12 +105,16 @@ def _build_pipeline():
 
     log.info("[server] building DCT-Forensic encoder (image, 768-d)...")
     # P9.1: pass head_state_path so the head Linear(2048, 768) matches the cache
-    dct_forensic = DctForensicEncoder(
-        out_dim=768,
-        ckpt=dct_ckpt,
-        head_state_path=dct_head_state if dct_head_state.exists() else None,
-        seed=42,  # belt-and-suspenders: also seed before init
-    ).to(DEVICE).eval()
+    dct_forensic = (
+        DctForensicEncoder(
+            out_dim=768,
+            ckpt=dct_ckpt,
+            head_state_path=dct_head_state if dct_head_state.exists() else None,
+            seed=42,  # belt-and-suspenders: also seed before init
+        )
+        .to(DEVICE)
+        .eval()
+    )
     for p in dct_forensic.parameters():
         p.requires_grad = False
 
@@ -114,12 +122,16 @@ def _build_pipeline():
     qwen = Qwen2TextEncoder(load_backbone=True)
 
     log.info("[server] building V3PairwiseFusion + loading retrain ckpt...")
-    fusion = V3PairwiseFusion(
-        feat_dim=768,
-        fused_dim=1024,
-        num_classes=5,
-        proj_dims={"v_semantic": 512, "v_textfor": 3584},
-    ).to(DEVICE).eval()
+    fusion = (
+        V3PairwiseFusion(
+            feat_dim=768,
+            fused_dim=1024,
+            num_classes=5,
+            proj_dims={"v_semantic": 512, "v_textfor": 3584},
+        )
+        .to(DEVICE)
+        .eval()
+    )
     payload = torch.load(fusion_ckpt, map_location=DEVICE, weights_only=False)
     state = payload.get("model_state", payload) if isinstance(payload, dict) else payload
     missing, unexpected = fusion.load_state_dict(state, strict=False)
@@ -183,14 +195,16 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)) -> JSONR
         t = t.unsqueeze(0).to(DEVICE)
 
         with torch.no_grad():
-            v_semantic = _state["fndclip"](fnd_batch)              # [1, 512]
+            v_semantic = _state["fndclip"](fnd_batch)  # [1, 512]
             v_imgfor = _state["dct_forensic"]({"v_imgfor_dct": t})  # [1, 768]
             v_textfor = _state["qwen"].encode_text(text).to(DEVICE)  # [1, 3584]
-            out = _state["fusion"]({
-                "v_semantic": v_semantic,
-                "v_imgfor": v_imgfor,
-                "v_textfor": v_textfor,
-            })
+            out = _state["fusion"](
+                {
+                    "v_semantic": v_semantic,
+                    "v_imgfor": v_imgfor,
+                    "v_textfor": v_textfor,
+                }
+            )
 
         logits = out["main_logits"][0]
         probs = F.softmax(logits, dim=-1).cpu().tolist()
@@ -215,16 +229,18 @@ async def analyze(text: str = Form(...), image: UploadFile = File(...)) -> JSONR
             "overall": round(1.0 - float(probs[0]), 2),
         }
 
-        return JSONResponse({
-            "verdict": LABELS[pred],
-            "verdict_ar": LABELS_AR[pred],
-            "confidence": confidence,
-            "label_index": pred,
-            "probabilities": prob_dict,
-            "modules": modules,
-            "explanation": EXPLANATIONS_EN[pred],
-            "explanation_ar": EXPLANATIONS_AR[pred],
-        })
+        return JSONResponse(
+            {
+                "verdict": LABELS[pred],
+                "verdict_ar": LABELS_AR[pred],
+                "confidence": confidence,
+                "label_index": pred,
+                "probabilities": prob_dict,
+                "modules": modules,
+                "explanation": EXPLANATIONS_EN[pred],
+                "explanation_ar": EXPLANATIONS_AR[pred],
+            }
+        )
     except Exception as e:
         log.exception("analyze failed")
         return JSONResponse({"error": f"{type(e).__name__}: {e}"}, status_code=500)

@@ -171,7 +171,10 @@ def test_f_disable_branches_kwarg_is_backward_compatible():
     m1 = V3PairwiseFusion(feat_dim=768, fused_dim=1024, num_classes=5)
     torch.manual_seed(0)
     m2 = V3PairwiseFusion(
-        feat_dim=768, fused_dim=1024, num_classes=5, disable_branches=None,
+        feat_dim=768,
+        fused_dim=1024,
+        num_classes=5,
+        disable_branches=None,
     )
     m1.eval()
     m2.eval()

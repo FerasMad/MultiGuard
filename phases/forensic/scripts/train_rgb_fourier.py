@@ -86,8 +86,12 @@ def seed_all(seed: int) -> None:
 class RandomFourierMask:
     """50% probability wrapper around FrequencyMaskGenerator (training-only, F.8)."""
 
-    def __init__(self, p: float = FOURIER_MASK_PROB, ratio: float = FOURIER_MASK_RATIO,
-                 band: str = "low+high"):
+    def __init__(
+        self,
+        p: float = FOURIER_MASK_PROB,
+        ratio: float = FOURIER_MASK_RATIO,
+        band: str = "low+high",
+    ):
         self.p = p
         self.ratio = ratio
         self.band = band
@@ -286,10 +290,9 @@ def main():
         "--band",
         type=str,
         default="low+high",
-        choices=["all", "low", "mid", "high", "low+mid", "low+high", "mid+high",
-                 "low+mid+high"],
+        choices=["all", "low", "mid", "high", "low+mid", "low+high", "mid+high", "low+mid+high"],
         help="Fourier mask band (see docs/FOURIER_BAND_AUDIT.md). Default 'low+high' "
-             "matches the shipped ckpt. Stage C-lite uses 'all'.",
+        "matches the shipped ckpt. Stage C-lite uses 'all'.",
     )
     args = p.parse_args()
 

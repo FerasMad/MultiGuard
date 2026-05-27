@@ -22,7 +22,7 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 SHIPPED_CKPT = Path("phases/forensic/outputs/rgb/forensic_rgb_model.pth")
@@ -45,9 +45,12 @@ def _backup_shipped() -> bool:
 
 def _train_band_all(python: str, epochs: int | None, limit_batches: int | None) -> bool:
     cmd = [
-        python, "phases/forensic/scripts/train_rgb_fourier.py",
-        "--band", "all",
-        "--out-dir", str(NEW_OUT_DIR),
+        python,
+        "phases/forensic/scripts/train_rgb_fourier.py",
+        "--band",
+        "all",
+        "--out-dir",
+        str(NEW_OUT_DIR),
     ]
     if epochs is not None:
         cmd += ["--epochs", str(epochs)]
@@ -64,10 +67,14 @@ def _train_band_all(python: str, epochs: int | None, limit_batches: int | None) 
 
 def _eval(ckpt: Path, out_json: Path, python: str) -> dict | None:
     cmd = [
-        python, "phases/forensic/scripts/eval_rgb.py",
-        "--ckpt", str(ckpt),
-        "--out-json", str(out_json),
-        "--out-table", str(out_json.with_suffix(".md")),
+        python,
+        "phases/forensic/scripts/eval_rgb.py",
+        "--ckpt",
+        str(ckpt),
+        "--out-json",
+        str(out_json),
+        "--out-table",
+        str(out_json.with_suffix(".md")),
     ]
     print(f"\n--- eval {ckpt} ---")
     print(" ".join(cmd))
@@ -80,6 +87,7 @@ def _eval(ckpt: Path, out_json: Path, python: str) -> dict | None:
 
 def _compute_deltas(shipped: dict, new: dict) -> dict:
     """Per-generator and overall AP/Acc/AUC deltas (new - shipped)."""
+
     def _safe(v):
         try:
             return float(v)
@@ -93,44 +101,50 @@ def _compute_deltas(shipped: dict, new: dict) -> dict:
     for g in gens:
         s, n = s_per[g], n_per[g]
         if s.get("skipped") or n.get("skipped"):
-            rows.append({
-                "generator": g,
-                "shipped_skipped": bool(s.get("skipped")),
-                "new_skipped": bool(n.get("skipped")),
-            })
+            rows.append(
+                {
+                    "generator": g,
+                    "shipped_skipped": bool(s.get("skipped")),
+                    "new_skipped": bool(n.get("skipped")),
+                }
+            )
             continue
         sap, nap = _safe(s.get("ap")), _safe(n.get("ap"))
         sac, nac = _safe(s.get("accuracy")), _safe(n.get("accuracy"))
         sau, nau = _safe(s.get("auc")), _safe(n.get("auc"))
-        rows.append({
-            "generator": g,
-            "shipped_ap": sap,
-            "new_ap": nap,
-            "delta_ap": (nap - sap) if (sap is not None and nap is not None) else None,
-            "shipped_acc": sac,
-            "new_acc": nac,
-            "delta_acc": (nac - sac) if (sac is not None and nac is not None) else None,
-            "shipped_auc": sau,
-            "new_auc": nau,
-            "delta_auc": (nau - sau) if (sau is not None and nau is not None) else None,
-        })
+        rows.append(
+            {
+                "generator": g,
+                "shipped_ap": sap,
+                "new_ap": nap,
+                "delta_ap": (nap - sap) if (sap is not None and nap is not None) else None,
+                "shipped_acc": sac,
+                "new_acc": nac,
+                "delta_acc": (nac - sac) if (sac is not None and nac is not None) else None,
+                "shipped_auc": sau,
+                "new_auc": nau,
+                "delta_auc": (nau - sau) if (sau is not None and nau is not None) else None,
+            }
+        )
     return {
         "shipped_ckpt": shipped.get("ckpt"),
         "new_ckpt": new.get("ckpt"),
         "shipped_aggregates": shipped.get("aggregates"),
         "new_aggregates": new.get("aggregates"),
         "per_generator_delta": rows,
-        "produced_at": datetime.now(timezone.utc).isoformat(),
+        "produced_at": datetime.now(UTC).isoformat(),
     }
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--epochs", type=int, default=None)
-    p.add_argument("--limit-batches", type=int, default=None,
-                   help="Smoke test: cap dataset size")
-    p.add_argument("--skip-train", action="store_true",
-                   help="Skip training (assume NEW_CKPT already exists; only re-eval)")
+    p.add_argument("--limit-batches", type=int, default=None, help="Smoke test: cap dataset size")
+    p.add_argument(
+        "--skip-train",
+        action="store_true",
+        help="Skip training (assume NEW_CKPT already exists; only re-eval)",
+    )
     p.add_argument("--python", default=str(Path(".venv/Scripts/python.exe")))
     args = p.parse_args()
 
