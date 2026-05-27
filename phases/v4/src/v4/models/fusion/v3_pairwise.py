@@ -181,6 +181,7 @@ class V3PairwiseFusion(FusionBase):
         v_imgfor = self.img_proj(features["v_imgfor"])
         v_textfor = self.text_proj(features["v_textfor"])
 
+        imgfor_disabled = bool(self.disable_branches) and "v_imgfor" in self.disable_branches
         if self.disable_branches:
             if "v_semantic" in self.disable_branches:
                 v_semantic = torch.zeros_like(v_semantic)
@@ -191,8 +192,16 @@ class V3PairwiseFusion(FusionBase):
 
         fused = self.fusion(v_semantic, v_imgfor, v_textfor)
         main_logits = self.classifier(fused)
-        # V3.1 section 5.5: detach v_imgfor to isolate aux loss gradients
-        aux_logits = self.aux_classifier(v_imgfor.detach())
+        # V3.1 section 5.5: detach v_imgfor to isolate aux loss gradients.
+        # When v_imgfor is disabled by an ablation, emit constant zero
+        # aux_logits instead of `aux_classifier.bias` (which would create a
+        # degenerate gradient on the aux head's bias term during training).
+        if imgfor_disabled:
+            aux_logits = torch.zeros(
+                v_imgfor.shape[0], 2, device=v_imgfor.device, dtype=v_imgfor.dtype
+            )
+        else:
+            aux_logits = self.aux_classifier(v_imgfor.detach())
 
         return {
             "main_logits": main_logits,

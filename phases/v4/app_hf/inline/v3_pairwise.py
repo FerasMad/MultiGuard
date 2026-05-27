@@ -111,6 +111,7 @@ class V3PairwiseFusion(nn.Module):
         v_semantic = self.sem_proj(features["v_semantic"])
         v_imgfor = self.img_proj(features["v_imgfor"])
         v_textfor = self.text_proj(features["v_textfor"])
+        imgfor_disabled = bool(self.disable_branches) and "v_imgfor" in self.disable_branches
         if self.disable_branches:
             if "v_semantic" in self.disable_branches:
                 v_semantic = torch.zeros_like(v_semantic)
@@ -120,5 +121,10 @@ class V3PairwiseFusion(nn.Module):
                 v_textfor = torch.zeros_like(v_textfor)
         fused = self.fusion(v_semantic, v_imgfor, v_textfor)
         main_logits = self.classifier(fused)
-        aux_logits = self.aux_classifier(v_imgfor.detach())
+        if imgfor_disabled:
+            aux_logits = torch.zeros(
+                v_imgfor.shape[0], 2, device=v_imgfor.device, dtype=v_imgfor.dtype
+            )
+        else:
+            aux_logits = self.aux_classifier(v_imgfor.detach())
         return {"main_logits": main_logits, "aux_logits": aux_logits, "fused": fused}
