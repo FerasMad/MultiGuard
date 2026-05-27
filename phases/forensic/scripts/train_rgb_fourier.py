@@ -86,15 +86,17 @@ def seed_all(seed: int) -> None:
 class RandomFourierMask:
     """50% probability wrapper around FrequencyMaskGenerator (training-only, F.8)."""
 
-    def __init__(self, p: float = FOURIER_MASK_PROB, ratio: float = FOURIER_MASK_RATIO):
+    def __init__(self, p: float = FOURIER_MASK_PROB, ratio: float = FOURIER_MASK_RATIO,
+                 band: str = "low+high"):
         self.p = p
         self.ratio = ratio
-        # Doctor's spec says Fourier masking. Defaults match the repo's
-        # FrequencyMaskGenerator(ratio, band='low+high', transform_type='fourier',
-        # channel='all') i.e. full-channel Fourier mask covering low+high bands
-        # at the specified ratio.
+        self.band = band
+        # Doctor's spec says Fourier masking. Upstream's class-default is 'low+high'
+        # (two 56x56 corners ~942 pixels at ratio=0.15); upstream's train.py CLI
+        # default is 'all' (uniform over 50,176 pixels). See docs/FOURIER_BAND_AUDIT.md
+        # for the behavioral diff. Stage C-lite retrains at band='all' as an experiment.
         self.gen = FrequencyMaskGenerator(
-            ratio=ratio, band="low+high", transform_type="fourier", channel="all"
+            ratio=ratio, band=band, transform_type="fourier", channel="all"
         )
 
     def __call__(self, img):
@@ -103,11 +105,11 @@ class RandomFourierMask:
         return img
 
 
-def make_train_transform() -> transforms.Compose:
+def make_train_transform(band: str = "low+high") -> transforms.Compose:
     """F.8 + F.9: Fourier mask (50%), Resize 224 bilinear, ToTensor, Normalize."""
     return transforms.Compose(
         [
-            RandomFourierMask(p=FOURIER_MASK_PROB, ratio=FOURIER_MASK_RATIO),
+            RandomFourierMask(p=FOURIER_MASK_PROB, ratio=FOURIER_MASK_RATIO, band=band),
             transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.ToTensor(),
             transforms.Normalize(
@@ -280,6 +282,15 @@ def main():
     p.add_argument("--num-workers", type=int, default=4)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--limit-batches", type=int, default=None, help="Smoke test: cap dataset size")
+    p.add_argument(
+        "--band",
+        type=str,
+        default="low+high",
+        choices=["all", "low", "mid", "high", "low+mid", "low+high", "mid+high",
+                 "low+mid+high"],
+        help="Fourier mask band (see docs/FOURIER_BAND_AUDIT.md). Default 'low+high' "
+             "matches the shipped ckpt. Stage C-lite uses 'all'.",
+    )
     args = p.parse_args()
 
     seed_all(args.seed)
@@ -291,8 +302,8 @@ def main():
     )
 
     # data
-    print(f"[train_rgb] loading train: {args.train_dir}")
-    train_ds = datasets.ImageFolder(str(args.train_dir), transform=make_train_transform())
+    print(f"[train_rgb] loading train: {args.train_dir}  (Fourier band='{args.band}')")
+    train_ds = datasets.ImageFolder(str(args.train_dir), transform=make_train_transform(args.band))
     val_ds = datasets.ImageFolder(str(args.val_dir), transform=make_eval_transform())
     if args.limit_batches is not None:
         n = args.limit_batches * args.batch_size
@@ -383,6 +394,7 @@ def main():
             "init_method": init_method,
             "best_ap": best_ap,
             "best_epoch": best_epoch,
+            "band": args.band,
         }
         torch.save(payload, latest_path)
         if is_best:
@@ -416,6 +428,7 @@ def main():
         "train_n": len(train_ds),
         "val_n": len(val_ds),
         "seed": args.seed,
+        "band": args.band,
     }
     (args.out_dir / "train_summary.json").write_text(json.dumps(summary, indent=2, default=str))
     print(f"\n[train_rgb] DONE  best_ap={best_ap:.4f} at epoch {best_epoch}  ({elapsed:.0f}s)")

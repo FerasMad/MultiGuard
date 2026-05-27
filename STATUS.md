@@ -192,6 +192,76 @@ that landed today:
 | P10.5 | Legacy `tests/` rot fixed | 4 stale path inserts surgically patched; 44 previously-broken tests now passing |
 | P8.6 | Full pytest suite | 95 tests green (V4 39 + forensic 12 + legacy 44) |
 
+## P14 -- External fix-plan audit + branch ablation + band experiment
+
+External collaborator handed two fix plans (`forensic_image_branch_fix_plan.md`
++ `multiguard_non_image_pipeline_fix_plan.md`). User scoped autonomous run to
+"all 14 audit/test items + 1 retrain experiment" (A1-A8 audits, B1-B6 ablation
++ spec tests, C-lite band=all retrain). Stage C (data refresh) + Stage D
+(fusion retrain) deferred -- need Drive browser auth.
+
+### Stage A -- read-only audits (8 docs)
+
+| ID | Doc | Headline finding |
+|---|---|---|
+| A1 | `docs/FNDCLIP_REAL_OOC_AUDIT.md` | FND-CLIP V1 leakfree at-chance for binary Real-vs-OOC (acc 0.498, F1 0.506, AUC 0.512 via linear probe on 512-d v_semantic). C0/C1 F1 ceiling is **data-scale**, not fusion. |
+| A2 | `docs/TEXT_BRANCH_AUDIT.md` | Qwen2-7B forced deviations: hidden 3584 (not PDF's 4096), layer -1 (not PDF's 30 -- Qwen2 has only 28 layers). Both architecturally forced, F2 register. |
+| A3 | `docs/DATASET_MAPPING_AUDIT.md` | 0 sample_id cross-split leaks; **97 label conflicts** (image_path under multiple labels); **16 image_path train/test leaks**. Documented as data-side cleanups needed if Stage C is executed. |
+| A4 | `docs/IMAGE_TRANSFER_PROBE.md` | DCT-Forensic shipped ckpt transfers to pipeline image distribution at **AP 0.7717 / AUC 0.7818** (binary fake vs real). Refutes friend's claim of "near-random". |
+| A5 | `docs/DCT_NUMERICAL_AUDIT.md` | `scipy.fft.dctn` vs `scipy.fftpack.dct`: **0.0 max abs diff** on 5 random images. The two paths are numerically identical. |
+| A6 | `docs/LOSS_AUDIT.md` | CE(main) + 0.1*BCE(aux) with `v_imgfor.detach()`; binary aux labels (cls 0/1/3->0, cls 2/4->1) via centralized `binary_image_label()`. Aux head never read at inference. V3.1 5.5 fully honored. |
+| A7 | `docs/APPROACH1_TRAINER_AUDIT.md` | Our `train_rgb_fourier.py` matches doctor F.4-F.11 exactly; every divergence from upstream `chandlerbing65nm/FakeImageDetection/train.py` is required by spec. |
+| A8 | `docs/FOURIER_BAND_AUDIT.md` | `band='all'` masks 7,527 indices uniformly over 224x224; `band='low+high'` masks 942 indices in two 56x56 corners (skips mid). **Materially different** masking. Justifies C-lite retrain. |
+
+### Stage B -- branch ablation + spec tests
+
+| ID | Artifact | Outcome |
+|---|---|---|
+| B3 | `phases/v4/{src/v4,app_hf/inline}/v3_pairwise.py` -- `disable_branches` kwarg | Additive, default-no-op; existing 3-seed ensemble ckpts still load with `strict=True` |
+| B5 | `phases/v4/tests/spec_compliance/test_fusion_architecture.py` (6 tests) | a) pairwise SUM not concat, b) Conv1d over interaction-channel axis, c) main_logits raw (no softmax), d) aux head Linear(768,2) on detach, e) BaseEvaluator does not read aux_logits, f) `disable_branches=None` is backward-compatible. All pass. |
+| B1+B2 | `phases/v4/scripts/train_branch_ablation.py` + 4 YAMLs | One driver invokes the 4 ablation variants sequentially via `python -m v4 train` |
+| B6 | 4 training runs (~16 min total on RTX 4070, warm cache) | All 4 finished cleanly |
+| B4 | `docs/BRANCH_ABLATION_REPORT.md` -- doctor-facing | See headline table below |
+
+**Headline 4-way test F1 (seed=42, same cached features, same hyperparams):**
+
+| Variant | Test F1-macro | C0 Real | C1 OOC | C2 Manip | C3 AI-Text | C4 FullFab | Delta vs baseline |
+|---|---|---|---|---|---|---|---|
+| fndclip (semantic only) | 0.6681 | 0.451 | 0.306 | 0.738 | 0.886 | 0.960 | (baseline) |
+| fndclip + text | 0.7103 | 0.411 | 0.448 | 0.731 | **0.981** | **0.982** | +4.22 pp |
+| fndclip + image | 0.6975 | 0.391 | **0.464** | **0.751** | 0.911 | 0.970 | +2.94 pp |
+| **all 3 branches** | **0.7157** | 0.430 | 0.426 | 0.752 | 0.985 | 0.985 | **+4.76 pp** |
+
+The `all` variant matches the shipped 3-seed honest ensemble (0.7149 test F1)
+within +/-1pp. Text branch is the dominant contributor (+4.2pp); image branch
+adds +2.9pp alone but only +0.54pp on top of text. Image owns class 2 signal;
+text owns class 3/4 signal -- both branches doing the job V3.1 spec assigned.
+
+### Stage C-lite -- band='all' Approach 1 retrain (COMPLETED)
+
+Single retrain experiment to empirically settle the F-A8 deviation. Trained
+Approach 1 at `band='all'` (upstream CLI default) on the same VisualNews-as-nature
+splits + same hyperparameters as the shipped `band='low+high'` ckpt. Then
+re-evaluated both ckpts per-generator with `eval_rgb.py`.
+
+**Headline: shipped `band='low+high'` wins overall.** New `band='all'` ckpt has:
+
+| Aggregate | shipped (low+high) | new (all) | Delta |
+|---|---|---|---|
+| Overall AP | **0.9979** | 0.9974 | -0.0005 |
+| Overall Acc | 0.9800 | 0.9785 | -0.0015 |
+| StdDev AP across gens | **0.0023** | 0.0040 | +0.0017 (74% worse) |
+
+`band='all'` was slightly better on GAN-class (BigGAN +0.0002, glide +0.0009,
+adm +0.0003) but lost on midjourney (-0.0040 AP, -0.0150 Acc) and had 74%
+higher variance. Production ckpt unchanged. Full per-generator table +
+interpretation in `docs/BAND_ALL_EXPERIMENT.md`.
+
+The F-A8 deviation is now empirically settled: it was a real divergence from
+upstream CLI defaults, but the shipped choice turned out marginally better.
+If SD v1.4 / SD v1.5 generators become available (FOLLOWUP A), re-run this
+experiment to confirm.
+
 ## Open follow-ups (still deferred, doctor-acknowledged)
 
 1. SD v1.4 / SD v1.5 generators (`phases/forensic/FOLLOWUP.md` A) - needs official

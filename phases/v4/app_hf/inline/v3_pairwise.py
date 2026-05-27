@@ -62,6 +62,8 @@ class ThreeWayFusion(nn.Module):
 class V3PairwiseFusion(nn.Module):
     """V3.1 sec 5-6 fusion + classifier head + sec 5.5 aux head."""
 
+    _DISABLE_KEYS = frozenset({"v_semantic", "v_imgfor", "v_textfor"})
+
     def __init__(
         self,
         feat_dim: int = 768,
@@ -70,11 +72,22 @@ class V3PairwiseFusion(nn.Module):
         num_heads: int = 8,
         attn_dropout: float = 0.1,
         proj_dims: dict | None = None,
+        disable_branches: list[str] | tuple[str, ...] | None = None,
     ):
         super().__init__()
         self.feat_dim = feat_dim
         self.fused_dim = fused_dim
         self.num_classes = num_classes
+
+        # Mirror src/v4/models/fusion/v3_pairwise.py Stage-B ablation hook.
+        disable_branches = list(disable_branches or [])
+        unknown = set(disable_branches) - self._DISABLE_KEYS
+        if unknown:
+            raise ValueError(
+                f"disable_branches contains unknown keys {sorted(unknown)}; "
+                f"valid keys are {sorted(self._DISABLE_KEYS)}"
+            )
+        self.disable_branches: frozenset[str] = frozenset(disable_branches)
 
         proj_dims = proj_dims or {}
         self.sem_proj = self._build_proj(proj_dims.get("v_semantic"), feat_dim)
@@ -98,6 +111,13 @@ class V3PairwiseFusion(nn.Module):
         v_semantic = self.sem_proj(features["v_semantic"])
         v_imgfor = self.img_proj(features["v_imgfor"])
         v_textfor = self.text_proj(features["v_textfor"])
+        if self.disable_branches:
+            if "v_semantic" in self.disable_branches:
+                v_semantic = torch.zeros_like(v_semantic)
+            if "v_imgfor" in self.disable_branches:
+                v_imgfor = torch.zeros_like(v_imgfor)
+            if "v_textfor" in self.disable_branches:
+                v_textfor = torch.zeros_like(v_textfor)
         fused = self.fusion(v_semantic, v_imgfor, v_textfor)
         main_logits = self.classifier(fused)
         aux_logits = self.aux_classifier(v_imgfor.detach())

@@ -1,0 +1,89 @@
+{
+  "ckpt": "phases\\forensic\\outputs\\rgb_bandall\\forensic_rgb_model.pth",
+  "approach": "1 (RGB + Fourier mask)",
+  "per_generator": {
+    "midjourney": {
+      "generator": "midjourney",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.989246614066121,
+      "accuracy": 0.941,
+      "auc": 0.990008
+    },
+    "sdv1_4": {
+      "generator": "sdv1_4",
+      "skipped": true,
+      "reason": "test folder not found at phases\\forensic\\data\\genimage_test\\sdv1_4"
+    },
+    "sdv1_5": {
+      "generator": "sdv1_5",
+      "skipped": true,
+      "reason": "test folder not found at phases\\forensic\\data\\genimage_test\\sdv1_5"
+    },
+    "wukong": {
+      "generator": "wukong",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9986527605233705,
+      "accuracy": 0.982,
+      "auc": 0.998664
+    },
+    "vqdm": {
+      "generator": "vqdm",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9979453498765259,
+      "accuracy": 0.979,
+      "auc": 0.997976
+    },
+    "adm": {
+      "generator": "adm",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9990246254086075,
+      "accuracy": 0.987,
+      "auc": 0.9990559999999999
+    },
+    "glide": {
+      "generator": "glide",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9994251920583064,
+      "accuracy": 0.993,
+      "auc": 0.999452
+    },
+    "biggan": {
+      "generator": "biggan",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9998430953568624,
+      "accuracy": 0.989,
+      "auc": 0.999844
+    }
+  },
+  "aggregates": {
+    "overall_avg": {
+      "ap": 0.9973562728816323,
+      "accuracy": 0.9784999999999999,
+      "auc": 0.9974999999999999
+    },
+    "gan_avg": {
+      "ap": 0.9998430953568624,
+      "accuracy": 0.989,
+      "auc": 0.999844
+    },
+    "diffusion_avg": {
+      "ap": 0.9968589083865863,
+      "accuracy": 0.9763999999999999,
+      "auc": 0.9970312
+    },
+    "std_dev_ap": 0.004025979899410243,
+    "n_generators_evaluated": 6
+  }
+}
