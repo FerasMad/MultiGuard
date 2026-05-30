@@ -24,9 +24,12 @@ import torch
 import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
 from PIL import Image
+from torchvision import transforms
 
+from inline.a1_resnet import resnet50 as build_a1_rgb
 from inline.class_map import LABELS, LABEL_EXPLANATIONS
 from inline.dct_forensic import DctForensicEncoder
+from inline.dct_resnet50 import build_dct_resnet50
 from inline.dual_dct import compute_dual_dct
 from inline.fnd_clip import FNDCLIPSemanticEncoder, prepare_fnd_inputs
 from inline.qwen_text import Qwen2TextEncoder
@@ -64,6 +67,16 @@ CLASS_TO_COLOR = {
 _state: dict = {}
 
 
+def _load_state(model, ckpt_path):
+    """Load a forensic-detector checkpoint (model_state dict or raw state_dict)."""
+    payload = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    sd = payload.get("model_state", payload) if isinstance(payload, dict) else payload
+    if isinstance(sd, dict):
+        sd = {k.replace("module.", ""): v for k, v in sd.items()}
+    model.load_state_dict(sd, strict=True)
+    return model
+
+
 def _build_pipeline():
     t0 = time.time()
     log.info("[build] FND-CLIP V1 ckpt ...")
@@ -95,6 +108,27 @@ def _build_pipeline():
     for p in dct_forensic.parameters():
         p.requires_grad = False
 
+    # Standalone binary forensic detectors for the A1/A2 tabs (P17, 8-gen + official
+    # ImageNet nature). These are SEPARATE from the 5-class `dct_forensic` encoder
+    # above -- which keeps the 6-gen forensic-dct-v1 + parity head for fusion parity.
+    log.info("[build] A1 RGB + A2 DCT standalone forensic detectors (8-gen official) ...")
+    a1_rgb_ckpt = hf_hub_download(repo_id="FerasMad/forensic-rgb-v1", filename="forensic_rgb_model.pth")
+    a1_rgb = build_a1_rgb(pretrained=False)
+    a1_rgb.change_output(1)
+    _load_state(a1_rgb, a1_rgb_ckpt)
+    a1_rgb.eval()
+    for p in a1_rgb.parameters():
+        p.requires_grad = False
+
+    a2_dct_ckpt = hf_hub_download(repo_id="FerasMad/forensic-dct-8gen", filename="forensic_dct_model.pth")
+    a2_dct_stats_path = hf_hub_download(repo_id="FerasMad/forensic-dct-8gen", filename="dct_stats.json")
+    a2_dct = build_dct_resnet50(pretrained=False)
+    _load_state(a2_dct, a2_dct_ckpt)
+    a2_dct.eval()
+    for p in a2_dct.parameters():
+        p.requires_grad = False
+    a2_stats = json.loads(Path(a2_dct_stats_path).read_text(encoding="utf-8"))
+
     log.info("[build] Qwen2-7B-Instruct (lazy, loads on first @spaces.GPU call) ...")
     qwen = Qwen2TextEncoder(load_backbone=False)
 
@@ -123,6 +157,10 @@ def _build_pipeline():
         "fusions": fusions,
         "dct_mean": float(stats_obj["mean"]),
         "dct_std": float(stats_obj["std"]),
+        "a1_rgb": a1_rgb,
+        "a2_dct": a2_dct,
+        "a2_dct_mean": float(a2_stats["mean"]),
+        "a2_dct_std": float(a2_stats["std"]),
     }
 
 
@@ -266,6 +304,68 @@ def _modules_html(modules, lang):
     return f'<div class="mg-modules"><div class="mg-mod-title">{title}</div>' + "".join(rows) + "</div>"
 
 
+# --- Standalone binary forensic detectors (A1 / A2 tabs, P17) ----------------
+# These run on CPU and are independent of the 5-class pipeline above.
+
+_A1_TRANSFORM = transforms.Compose(
+    [
+        transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BILINEAR),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+
+
+def _forensic_html(p_fake: float, approach: str) -> str:
+    pct = round(p_fake * 100, 1)
+    is_fake = p_fake >= 0.5
+    verdict = "AI-Generated Image" if is_fake else "Real Image"
+    color = "#dc2626" if is_fake else "#10b981"
+    cls = "fabricated" if is_fake else "real"
+    return f"""
+<div class="mg-verdict mg-{cls}">
+  <div class="mg-verdict-label">{approach}</div>
+  <div class="mg-verdict-title" style="color:{color}">{verdict}</div>
+  <div class="mg-conf-bar"><div class="mg-conf-fill" style="width:{pct}%;background:{color}"></div></div>
+  <div class="mg-conf-text">P(AI-generated): <strong>{pct}%</strong></div>
+</div>
+"""
+
+
+def forensic_a1(image):
+    """Approach 1 (RGB + Fourier) binary forensic detector -- CPU."""
+    if image is None:
+        return _error_html("Please upload an image")
+    try:
+        pil = (image if isinstance(image, Image.Image) else Image.fromarray(image)).convert("RGB")
+        x = _A1_TRANSFORM(pil).unsqueeze(0)
+        with torch.no_grad():
+            logit = _state["a1_rgb"](x).squeeze()
+            p_fake = float(torch.sigmoid(logit))
+    except Exception as e:
+        log.exception("forensic_a1 failed")
+        return _error_html(f"{type(e).__name__}: {e}")
+    return _forensic_html(p_fake, "Approach 1 -- RGB + Fourier Mask")
+
+
+def forensic_a2(image):
+    """Approach 2 (Dual-DCT) binary forensic detector -- CPU."""
+    if image is None:
+        return _error_html("Please upload an image")
+    try:
+        pil = (image if isinstance(image, Image.Image) else Image.fromarray(image)).convert("RGB")
+        t = compute_dual_dct(pil)
+        t = (t - _state["a2_dct_mean"]) / (_state["a2_dct_std"] + 1e-8)
+        t = t.unsqueeze(0)
+        with torch.no_grad():
+            logit = _state["a2_dct"](t).squeeze()
+            p_fake = float(torch.sigmoid(logit))
+    except Exception as e:
+        log.exception("forensic_a2 failed")
+        return _error_html(f"{type(e).__name__}: {e}")
+    return _forensic_html(p_fake, "Approach 2 -- Dual-DCT")
+
+
 CSS = """
 .gradio-container { max-width: 1100px !important; margin: 0 auto !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 .mg-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #e5e7eb; margin-bottom: 24px; }
@@ -320,36 +420,59 @@ def main():
 
     with gr.Blocks(css=CSS, title="MultiGuard", theme=gr.themes.Default(primary_hue="indigo")) as demo:
         gr.HTML(HEADER_HTML)
+        with gr.Tabs():
+            with gr.Tab("5-Class Fake-News"):
+                with gr.Row():
+                    text_in = gr.Textbox(
+                        label="Article Text",
+                        placeholder="Paste the article text here...",
+                        lines=8,
+                    )
+                    image_in = gr.Image(label="Article Image", type="pil", height=240)
 
-        with gr.Row():
-            text_in = gr.Textbox(
-                label="Article Text",
-                placeholder="Paste the article text here...",
-                lines=8,
-            )
-            image_in = gr.Image(label="Article Image", type="pil", height=240)
+                submit_btn = gr.Button("Analyze Article", variant="primary", size="lg")
 
-        submit_btn = gr.Button("Analyze Article", variant="primary", size="lg")
+                with gr.Row():
+                    verdict_out = gr.HTML()
+                    with gr.Column():
+                        probs_out = gr.HTML()
+                        modules_out = gr.HTML()
 
-        with gr.Row():
-            verdict_out = gr.HTML()
-            with gr.Column():
-                probs_out = gr.HTML()
-                modules_out = gr.HTML()
+                with gr.Accordion("Sample inputs", open=False):
+                    gr.Markdown(
+                        "- **Real news**: paste a recent news article + its original photo.\n"
+                        "- **OOC**: a real photo + a caption from a *different* unrelated story.\n"
+                        "- **Manipulated**: a deepfake / face-swap image + plausible caption.\n"
+                        "- **AI-Text**: a real photo + LLM-generated misinformation text.\n"
+                        "- **Fully fabricated**: an AI-generated (MidJourney) image + AI-generated text."
+                    )
 
-        with gr.Accordion("Sample inputs", open=False):
-            gr.Markdown(
-                "- **Real news**: paste a recent news article + its original photo.\n"
-                "- **OOC**: a real photo + a caption from a *different* unrelated story.\n"
-                "- **Manipulated**: a deepfake / face-swap image + plausible caption.\n"
-                "- **AI-Text**: a real photo + LLM-generated misinformation text.\n"
-                "- **Fully fabricated**: an AI-generated (MidJourney) image + AI-generated text."
-            )
+            with gr.Tab("Forensic A1 (RGB+Fourier)"):
+                gr.Markdown(
+                    "**Binary AI-image detector -- Approach 1** (fine-tuned RGB ResNet50 with "
+                    "Fourier masking). Retrained on all 8 GenImage generators with official "
+                    "ImageNet nature (overall test AP ~0.99). Upload an image to get P(AI-generated)."
+                )
+                a1_image = gr.Image(label="Image", type="pil", height=240)
+                a1_btn = gr.Button("Detect (Approach 1)", variant="primary")
+                a1_out = gr.HTML()
+
+            with gr.Tab("Forensic A2 (Dual-DCT)"):
+                gr.Markdown(
+                    "**Binary AI-image detector -- Approach 2** (Dual-DCT ResNet50, "
+                    "frequency-domain input). Retrained on all 8 GenImage generators with "
+                    "official ImageNet nature. Upload an image to get P(AI-generated)."
+                )
+                a2_image = gr.Image(label="Image", type="pil", height=240)
+                a2_btn = gr.Button("Detect (Approach 2)", variant="primary")
+                a2_out = gr.HTML()
 
         gr.Markdown(
             """
             ### About
-            5-class multimodal fake-news detector (V3.1 spec, honest-path retrain).
+            5-class multimodal fake-news detector (V3.1 spec, honest-path retrain) + two
+            standalone binary AI-image forensic detectors (8/8 GenImage generators, official
+            ImageNet nature).
             Stack: FND-CLIP semantic + DCT-Forensic image + Qwen2-7B text -> V3PairwiseFusion -> MLP.
 
             **Headline numbers:** 3-seed ensemble test F1 = 0.7149, MMFakeBench transfer F1 = 0.7197 (+ bias correction).
@@ -364,6 +487,8 @@ def main():
             api_name=False,
             show_api=False,
         )
+        a1_btn.click(fn=forensic_a1, inputs=a1_image, outputs=a1_out, api_name=False, show_api=False)
+        a2_btn.click(fn=forensic_a2, inputs=a2_image, outputs=a2_out, api_name=False, show_api=False)
 
     return demo
 

@@ -11,6 +11,11 @@ Three tabs in one Gradio app: Forensic A1 (RGB+Fourier), Forensic A2 (Dual-DCT),
 V4 5-class fake-news. Forensic tabs work on CPU. The V4 tab requires GPU; on CPU-basic
 it gracefully degrades to the static eval numbers from `phases/v4/docs/eval/seed42/`.
 
+> **P17:** the two forensic tabs run the **8/8-generator official-nature detectors**
+> (A1 from `FerasMad/forensic-rgb-v1`, A2 from the new `FerasMad/forensic-dct-8gen`).
+> The 5-class tab is **unchanged** — it still uses the 6-gen `forensic-dct-v1`
+> encoder + parity head + 3-seed fusion (parity preserved; verified additive diff).
+
 For the box-to-file mapping of the doctor's architecture diagram see
 [`docs/PIPELINE.md`](docs/PIPELINE.md).
 
