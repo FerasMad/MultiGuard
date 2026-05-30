@@ -9,5 +9,6 @@
   "elapsed_s": 1271.2,
   "train_n": 12000,
   "val_n": 3000,
-  "seed": 42
+  "seed": 42,
+  "init_ckpt_sha256": "6cb5cda1d8f881e01e4360a8795fe044bde51fe3d8f89c371970cc7dfeb89c06"
 }

@@ -9,24 +9,38 @@
 
 ## TL;DR
 
-| Metric | Shipped (stale v_sem) | v2 (fresh v_sem) | Delta |
+**Apples-to-apples 3-seed ensemble (P16 update):** the honest-v2 ensemble
+(seeds 42/1337/2024 on fresh v_semantic) scores **test F1 = 0.7147**, vs the
+shipped ensemble's **0.7149** -- statistically identical (-0.02 pp).
+
+| Metric | Shipped ens (stale v_sem) | v2 ens (fresh v_sem) | Delta |
 |---|---|---|---|
-| **Test F1-macro (seed=42)** | 0.7152 | **0.7149** | -0.0003 (essentially flat) |
-| Cls 0 Real F1 | 0.397 | **0.488** | **+9.1 pp** |
-| Cls 1 OOC F1 | 0.442 | 0.376 | -6.6 pp |
-| Cls 2 Manipulated F1 | 0.757 | 0.762 | +0.5 pp |
-| **Cls 3 AI-Text F1** | **0.989** | **0.973** | **-1.6 pp** |
-| **Cls 4 Fully-Fab F1** | **0.990** | **0.976** | **-1.4 pp** |
-| Best val F1 | 0.7372 @ ep 12 | 0.7270 @ ep 4 | -1.0 pp |
+| **Test F1-macro (3-seed ensemble)** | **0.7149** | **0.7147** | -0.0002 (flat) |
+| Cls 0 Real F1 | 0.397 | **0.489** | **+9.2 pp** |
+| Cls 1 OOC F1 | 0.442 | 0.377 | -6.5 pp |
+| Cls 2 Manipulated F1 | 0.757 | 0.759 | +0.2 pp |
+| **Cls 3 AI-Text F1** | **0.989** | **0.974** | **-1.5 pp** |
+| **Cls 4 Fully-Fab F1** | **0.990** | **0.974** | **-1.6 pp** |
+| MMFakeBench transfer F1 (raw) | 0.4308 | 0.4568 | +2.6 pp |
+| Per-seed val F1 | 0.737 / -- / -- | 0.727 / 0.723 / 0.715 | -- |
 
-Macro F1 is essentially conserved (-0.03 pp) but the **per-class
-redistribution exposes the shortcut**: cls 3/4 lose ~1.5 pp each (the
-LLM-syntactic-fingerprint signal that was leaking through FND-CLIP's
-BERT sub-encoder) and cls 0 gains ~9 pp (better Real recognition once
-the shortcut isn't dominating cls 3/4 training).
+Macro F1 is conserved (-0.02 pp) but the **per-class redistribution exposes
+the shortcut**: cls 3/4 lose ~1.5 pp each (the LLM-syntactic-fingerprint
+signal that was leaking through FND-CLIP's BERT sub-encoder) and cls 0 gains
+~9 pp (better Real recognition once the shortcut isn't dominating cls 3/4
+training). The single-seed numbers (below) show the same pattern.
 
-The shortcut was real but smaller than feared. The shipped pipeline's
-overall headline number wasn't materially inflated.
+**The shortcut was real but it did NOT inflate the headline.** Shipped 0.7149
+vs honest-v2 0.7147 means the deployed model's overall F1 stands on legitimate
+signal; the shortcut merely traded ~3 pp of cls-3/4 F1 against ~9 pp of cls-0 F1.
+
+### Single-seed (seed=42) detail
+
+| Metric | Shipped (stale) | v2 (fresh) | Delta |
+|---|---|---|---|
+| Test F1-macro | 0.7152 | 0.7149 | -0.0003 |
+| Cls 0 / 1 / 2 / 3 / 4 F1 | .397/.442/.757/.989/.990 | .488/.376/.762/.973/.976 | -- |
+| Best val F1 | 0.7372 @ ep12 | 0.7270 @ ep4 | -1.0 pp |
 
 ## What was wrong (recap from P15 audit)
 
@@ -207,21 +221,30 @@ contributor at inference; its existence is justified mainly by cls 2.
 
 Wall-clock: ~6h (v_semantic recache) + ~3 min (v2 train) + ~30 s (eval) + ~3 min (inference ablation) = ~6h 7 min on RTX 4070.
 
+## Resolved in P16
+
+- **Multi-seed v2 retrain -- DONE.** Seeds 1337 + 2024 retrained on
+  `v_semantic_blip2`; 3-seed v2 ensemble test F1 = **0.7147** (vs shipped
+  ensemble 0.7149). Apples-to-apples confirms the headline is honest. Ckpts:
+  `outputs/v4/stage2_fusion_honest_v2_seed{42,1337,2024}/best.pt`; ensemble
+  eval `outputs/v4/stage2_fusion_honest_v2_ensemble/`.
+- **Class-1 OOC ceiling -- characterized.** v2 ensemble C1 = 0.377 (shipped
+  0.442). The 6.5 pp swing is NOT recoverable signal: A1 proved FND-CLIP V1 is
+  at chance on Real-vs-OOC (linear-probe AUC 0.51), so the model is essentially
+  guessing on the 0/1 boundary. With near-zero true OOC signal, small training
+  perturbations move C1 a lot -- the stale-v_semantic shortcut happened to nudge
+  the boundary in C1's favor while inflating cls 3/4. C1's real ceiling is
+  ~0.38-0.44 and is **data-scale-limited**; it needs expanded NewsCLIPpings /
+  a dedicated OOC corpus, not a recipe change. No further fusion tuning will fix it.
+
 ## Open follow-ups (carried forward)
 
-1. **Class 1 OOC ceiling.** v2 drops C1 by 6.6 pp -- the model lost some
-   OOC-detection signal that was leaking through the cls 3/4 shortcut.
-   Need to investigate whether C1's true ceiling is ~0.38 (data-scale
-   constraint from A1) or whether multi-seed v2 ensemble would
-   recover some of the C1 F1 the shipped ensemble had.
-2. **Multi-seed v2 retrain.** This report is single-seed (42). The
-   shipped numbers are 3-seed ensembled. For an apples-to-apples
-   headline comparison, retrain seeds 1337 + 2024 against
-   `v_semantic_blip2` and run the ensemble. ~2 GPU-hours.
-3. **Stage C data refresh** (deferred from P14). SD v1.4 + SD v1.5
-   still missing from the forensic test split; full GenImage 8-gen
-   coverage requires browser-auth Drive download.
-4. **Bias-corrected transfer F1 = 0.7197** remains offline-only;
+1. **Stage C/D data refresh** (deferred from P14). SD v1.4 + SD v1.5
+   still missing from the forensic test split, and every generator's "nature"
+   is the VisualNews substitute (F-A3); full official-GenImage coverage +
+   corrected-data retrain requires a browser-auth Drive download. Tracked as
+   "Track B" in `STATUS.md`.
+2. **Bias-corrected transfer F1 = 0.7197** remains offline-only;
    `app/server_v4_retrain.py` doesn't apply the log-prior shift at
    runtime. Mirror at ~40 LOC if production needs to publish that
    number.

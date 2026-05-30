@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import random
 import shutil
@@ -162,7 +163,9 @@ def _resolve_checkpoint(preferred: Path | None) -> Path | None:
     return None
 
 
-def build_rgb_model(checkpoint_path: Path | None, device: torch.device) -> tuple[nn.Module, str]:
+def build_rgb_model(
+    checkpoint_path: Path | None, device: torch.device
+) -> tuple[nn.Module, str, str | None]:
     """Build the Approach 1 model:
 
     - resnet50 from networks/resnet.py (this repo's variant)
@@ -175,6 +178,11 @@ def build_rgb_model(checkpoint_path: Path | None, device: torch.device) -> tuple
     # F.5: try the preferred name + renamed siblings
     resolved = _resolve_checkpoint(checkpoint_path)
     pretrained_fallback = resolved is None
+    # Image fix-plan #4: record the resolved init-ckpt sha256 so the
+    # spectralmask-vs-fouriermask rename (F-A8) is provable from train_summary.
+    init_ckpt_sha256 = (
+        hashlib.sha256(resolved.read_bytes()).hexdigest() if resolved is not None else None
+    )
     model = resnet50(pretrained=pretrained_fallback)
 
     if not pretrained_fallback:
@@ -226,7 +234,7 @@ def build_rgb_model(checkpoint_path: Path | None, device: torch.device) -> tuple
     )
 
     model = model.to(device)
-    return model, init_method
+    return model, init_method, init_ckpt_sha256
 
 
 # training loop
@@ -333,7 +341,7 @@ def main():
     )
 
     # model
-    model, init_method = build_rgb_model(args.checkpoint, device)
+    model, init_method, init_ckpt_sha256 = build_rgb_model(args.checkpoint, device)
 
     # loss + optimizer + scheduler (F.10)
     criterion = nn.BCEWithLogitsLoss()
@@ -424,6 +432,7 @@ def main():
         "best_epoch": best_epoch,
         "final_epoch": epoch,
         "init_method": init_method,
+        "init_ckpt_sha256": init_ckpt_sha256,
         "best_ckpt": str(best_path),
         "forensic_named_ckpt": str(forensic_named_path),
         "history_csv": str(history_path),

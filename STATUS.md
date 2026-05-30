@@ -237,6 +237,33 @@ within +/-1pp. Text branch is the dominant contributor (+4.2pp); image branch
 adds +2.9pp alone but only +0.54pp on top of text. Image owns class 2 signal;
 text owns class 3/4 signal -- both branches doing the job V3.1 spec assigned.
 
+## P16 -- fix-plan gap closure (Track A): multi-seed v2 ensemble + missing tests/docs
+
+Audited both of the collaborator's Codex fix-plans line-by-line and closed
+every autonomous-safe gap. **Track B (official GenImage data refresh) stays
+open -- it needs a browser-auth Drive download only the user can do.**
+
+| Item | Result |
+|---|---|
+| **Multi-seed honest-v2 ensemble** | Seeds 1337+2024 retrained on fresh `v_semantic_blip2`; 3-seed v2 ensemble **test F1 = 0.7147** vs shipped 0.7149 -- statistically identical. Confirms the v_semantic shortcut did NOT inflate the headline (it traded ~3pp cls-3/4 for ~9pp cls-0). MMFakeBench transfer (raw) 0.4568 vs 0.4308. |
+| Qwen masked-pool test | `phases/v4/tests/unit/test_qwen_pooling.py` (6 tests): mask-before-mean, padding-values-irrelevant, left-padding, [B,3584] shape, no div-by-zero. Non-image fix-plan item #3. |
+| Approach-1 ckpt sha256 | `train_rgb_fourier.py` now records `init_ckpt_sha256`; shipped `rgb/train_summary.json` backfilled (`6cb5cda1...`). Image fix-plan item #4. |
+| `docs/IMAGE_BRANCH_ABLATION.md` | Written -- the image fix-plan's named deliverable (consolidates training-time + inference-time image-branch ablation). |
+
+**Fix-plan compliance after P16:** non-image plan 100% of audit/test
+deliverables; image plan's "audit & prove" half 100%, "data-fix & retrain"
+half (VisualNews->official GenImage nature + SD v1.4/v1.5 + corrected retrain)
+still **Track B / user-blocked**. Full write-up: `docs/HONEST_PATH_V2_REPORT.md`.
+
+### TRACK B -- still outstanding (needs user-staged GenImage Drive data)
+
+`genimage_test/` has 6/8 generators (no sdv1_4, sdv1_5) and every `0_real/`
+is a VisualNews substitute, not official GenImage ImageNet nature (F-A3).
+Both are Drive-only. To unblock: stage `imagenet_sdv1.4` + `imagenet_sdv1.5`
+(+ optionally official `nature/` for the other 6) under
+`phases/forensic/data/raw/genimage/<gen>/{nature,ai}/`, then the corrected-data
+retrain chain runs autonomously (~1-2 days). Detail in the approved plan file.
+
 ## P15 -- Codex-flagged review: honest-path v2 + leave-one-out ablation
 
 Codex spotted that the P14 "honest path" was only half-honest: `v_semantic`
