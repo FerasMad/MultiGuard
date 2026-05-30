@@ -19,6 +19,7 @@ DctForensicEncoder backbone -> 2048 -> Linear(2048, 768)+GELU -> v_imgfor.
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 
@@ -35,7 +36,11 @@ def main():
     p.add_argument(
         "--manifest",
         type=Path,
-        default=Path("data/processed/forensic_5class_c4fix.csv"),
+        # Default = the clean unified manifest (RELATIVE image_path values).
+        # forensic_5class_c4fix.csv carries ~6658 stale pre-rename ABSOLUTE paths
+        # (C:/Desktop/Multimodal-fake-news-detection/...) that no longer resolve
+        # and would silently build a 40%-truncated cache. (Track B, May 2026.)
+        default=Path("data/processed/forensic_5class_unified_blip2.csv"),
     )
     p.add_argument(
         "--ckpt",
@@ -136,6 +141,19 @@ def main():
     print(f"  skipped : {n_skipped} (already on disk)")
     print(f"  failed  : {n_fail}")
     print(f"  rate    : {(n_done + n_skipped) / max(elapsed, 1e-3):.1f}/s")
+
+    # Fail loud: a high miss rate means the cache is INCOMPLETE (e.g. stale
+    # image_path prefixes after a folder rename). Don't exit 0 and let a
+    # downstream fusion silently train on a truncated cache.
+    fail_rate = n_fail / max(len(df), 1)
+    if fail_rate > 0.02:
+        print(
+            f"\n[precompute] ERROR: {n_fail}/{len(df)} ({fail_rate:.1%}) samples failed; "
+            f"cache is INCOMPLETE. Check that image_path resolves on disk (stale "
+            f"absolute paths?) and re-run with a corrected --manifest.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
