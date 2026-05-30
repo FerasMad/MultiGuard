@@ -5,11 +5,24 @@ _Build config: `phases\forensic\configs\dct_resnet50.yaml`_
 _Repo: github.com/FerasMad/MultiGuard_  
 
 
-## 0. Track B update (May 2026) — 8/8 generators + official ImageNet nature
+## 0. Forensic refresh (May 2026) — 8/8 generators + official ImageNet nature
+
+> **P17 (latest): F-A3 fully resolved — all 8 generators retrained on official
+> ImageNet nature.** Canonical numbers: **A1 RGB+Fourier overall AP 0.9841**,
+> **A2 DCT overall AP 0.9085** (`outputs/eval_table_combined.md`). These are the
+> *honest* numbers — lower than the mixed-source Track-B step below because the
+> VisualNews-nature substitute was inflating the 6 non-SD generators via a
+> news-photo-vs-AI domain cue (the 6 that switched VisualNews→ImageNet dropped;
+> the 2 SD gens that were already official rose). Full before/after in
+> [`docs/F_A3_OFFICIAL_NATURE.md`](../../docs/F_A3_OFFICIAL_NATURE.md). Detectors:
+> `outputs/{dct_official,rgb_official}/`; mixed-source preserved as
+> `outputs/*.mixed8gen.*`.
+
+### Track B intermediate (mixed-source: bitmind/local AI + VisualNews nature for 6 gens)
 
 The original ship covered **6/8** generators (SD v1.4 / SD v1.5 were marked
 `_skipped_`) and used a **VisualNews** substitute for the "nature" real class.
-Both gaps are now **closed**:
+Both gaps were closed in Track B (the nature class is superseded by P17 above):
 
 - **Source found:** `shimei123/Genimage` (HuggingFace) hosts each generator as a
   discrete zip; `SD_v14.zip` (3.55 GB) + `SD_v15.zip` (4.74 GB) carry the

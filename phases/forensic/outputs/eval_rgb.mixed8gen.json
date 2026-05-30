@@ -1,96 +1,97 @@
 {
-  "ckpt": "phases\\forensic\\outputs\\dct_official\\forensic_dct_model.pth",
+  "ckpt": "phases\\forensic\\outputs\\rgb_8gen\\forensic_rgb_model.pth",
+  "approach": "1 (RGB + Fourier mask)",
   "per_generator": {
     "midjourney": {
       "generator": "midjourney",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.8276993929967394,
-      "accuracy": 0.737,
-      "auc": 0.8339260000000002
+      "ap": 0.9759201262117809,
+      "accuracy": 0.851,
+      "auc": 0.978668
     },
     "sdv1_4": {
       "generator": "sdv1_4",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.8904177798640154,
-      "accuracy": 0.809,
-      "auc": 0.893364
+      "ap": 0.9661131464398072,
+      "accuracy": 0.913,
+      "auc": 0.9676119999999999
     },
     "sdv1_5": {
       "generator": "sdv1_5",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.8956002663104373,
-      "accuracy": 0.817,
-      "auc": 0.9005799999999998
+      "ap": 0.9670250006111701,
+      "accuracy": 0.906,
+      "auc": 0.969024
     },
     "wukong": {
       "generator": "wukong",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.9023122475951483,
-      "accuracy": 0.818,
-      "auc": 0.9022539999999999
+      "ap": 0.9981254063349811,
+      "accuracy": 0.969,
+      "auc": 0.998156
     },
     "vqdm": {
       "generator": "vqdm",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.8301645638371881,
-      "accuracy": 0.753,
-      "auc": 0.8477919999999999
+      "ap": 0.9963580571520962,
+      "accuracy": 0.967,
+      "auc": 0.9965
     },
     "adm": {
       "generator": "adm",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.970572153315795,
-      "accuracy": 0.909,
-      "auc": 0.9730120000000001
+      "ap": 0.9987346298616228,
+      "accuracy": 0.989,
+      "auc": 0.99874
     },
     "glide": {
       "generator": "glide",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.9749675781621444,
-      "accuracy": 0.918,
-      "auc": 0.975308
+      "ap": 0.9989145128750105,
+      "accuracy": 0.983,
+      "auc": 0.998828
     },
     "biggan": {
       "generator": "biggan",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.9760710828951044,
-      "accuracy": 0.908,
-      "auc": 0.9795860000000001
+      "ap": 0.9995214742518984,
+      "accuracy": 0.997,
+      "auc": 0.99956
     }
   },
   "aggregates": {
     "overall_avg": {
-      "ap": 0.9084756331220716,
-      "accuracy": 0.8336250000000001,
-      "auc": 0.91322775
+      "ap": 0.9875890442172959,
+      "accuracy": 0.946875,
+      "auc": 0.988386
     },
     "gan_avg": {
-      "ap": 0.9760710828951044,
-      "accuracy": 0.908,
-      "auc": 0.9795860000000001
+      "ap": 0.9995214742518984,
+      "accuracy": 0.997,
+      "auc": 0.99956
     },
     "diffusion_avg": {
-      "ap": 0.8988191402973525,
-      "accuracy": 0.823,
-      "auc": 0.903748
+      "ap": 0.9858844113552099,
+      "accuracy": 0.9397142857142857,
+      "auc": 0.9867897142857143
     },
-    "std_dev_ap": 0.06098427713377608,
+    "std_dev_ap": 0.01513294156530001,
     "n_generators_evaluated": 8
   }
 }

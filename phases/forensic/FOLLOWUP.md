@@ -73,12 +73,19 @@ needs the chandlerbing65nm/FakeImageDetection repo (Linux-only shell scripts).
 
 ---
 
-## C. Replace VisualNews-as-nature with ImageNet "nature"
+## C. Replace VisualNews-as-nature with ImageNet "nature" — ✅ RESOLVED (P17)
 
-**Status:** F-A3 documented deviation. The model may have learned a partial
-"news-photo vs AI-image" cue rather than pure forensic frequency artifacts.
+**Status: DONE.** All 8 generators retrained on official ImageNet ILSVRC2012
+nature (from `shimei123/Genimage` `0_real/`); no VisualNews substitute remains
+anywhere in the forensic pipeline. The hypothesis was **confirmed**: VisualNews-
+as-nature was inflating the 6 non-SD generators via a news-photo-vs-AI domain cue.
+Removing it dropped DCT overall AP 0.9468 → **0.9085** (the 6 switched generators
+fell, e.g. VQDM −15.6 pp; the 2 SD gens already on official nature rose). RGB+Fourier
+is robust (0.9876 → **0.9841**). Full before/after: `docs/F_A3_OFFICIAL_NATURE.md`.
+Canonical detectors are now `outputs/{dct_official,rgb_official}/`; mixed-source
+preserved as `outputs/*.mixed8gen.*`.
 
-**Effort:** ~1 h (data + retrain + eval).
+**Effort:** done (~1 h data + retrain + eval, fully self-serve from HuggingFace).
 
 **Validation procedure:**
 

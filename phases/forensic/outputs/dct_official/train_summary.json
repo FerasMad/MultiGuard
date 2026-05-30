@@ -1,0 +1,13 @@
+{
+  "config_path": "phases\\forensic\\configs\\dct_resnet50.yaml",
+  "seed": 42,
+  "train_n": 16000,
+  "val_n": 4000,
+  "best_ap": 0.9201787959162414,
+  "best_epoch": 6,
+  "final_epoch": 11,
+  "final_phase": 2,
+  "best_ckpt": "phases\\forensic\\outputs\\dct_official\\best.pt",
+  "forensic_named_ckpt": "phases\\forensic\\outputs\\dct_official\\forensic_dct_model.pth",
+  "history_csv": "phases\\forensic\\outputs\\dct_official\\training_history.csv"
+}

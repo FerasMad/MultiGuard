@@ -1,96 +1,96 @@
 {
-  "ckpt": "phases\\forensic\\outputs\\dct_official\\forensic_dct_model.pth",
+  "ckpt": "phases\\forensic\\outputs\\dct_8gen\\forensic_dct_model.pth",
   "per_generator": {
     "midjourney": {
       "generator": "midjourney",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.8276993929967394,
-      "accuracy": 0.737,
-      "auc": 0.8339260000000002
+      "ap": 0.9158112816319752,
+      "accuracy": 0.777,
+      "auc": 0.92994
     },
     "sdv1_4": {
       "generator": "sdv1_4",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.8904177798640154,
-      "accuracy": 0.809,
-      "auc": 0.893364
+      "ap": 0.8381313374844351,
+      "accuracy": 0.782,
+      "auc": 0.858154
     },
     "sdv1_5": {
       "generator": "sdv1_5",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.8956002663104373,
-      "accuracy": 0.817,
-      "auc": 0.9005799999999998
+      "ap": 0.8631021212880322,
+      "accuracy": 0.767,
+      "auc": 0.8640239999999999
     },
     "wukong": {
       "generator": "wukong",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.9023122475951483,
-      "accuracy": 0.818,
-      "auc": 0.9022539999999999
+      "ap": 0.9827701987660835,
+      "accuracy": 0.901,
+      "auc": 0.9815559999999999
     },
     "vqdm": {
       "generator": "vqdm",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.8301645638371881,
-      "accuracy": 0.753,
-      "auc": 0.8477919999999999
+      "ap": 0.985884390626766,
+      "accuracy": 0.931,
+      "auc": 0.9866079999999999
     },
     "adm": {
       "generator": "adm",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.970572153315795,
-      "accuracy": 0.909,
-      "auc": 0.9730120000000001
+      "ap": 0.9952361286858087,
+      "accuracy": 0.963,
+      "auc": 0.9951760000000001
     },
     "glide": {
       "generator": "glide",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.9749675781621444,
-      "accuracy": 0.918,
-      "auc": 0.975308
+      "ap": 0.9938342883951253,
+      "accuracy": 0.977,
+      "auc": 0.995894
     },
     "biggan": {
       "generator": "biggan",
       "n_samples": 1000,
       "n_real": 500,
       "n_fake": 500,
-      "ap": 0.9760710828951044,
-      "accuracy": 0.908,
-      "auc": 0.9795860000000001
+      "ap": 0.9998045588376062,
+      "accuracy": 0.99,
+      "auc": 0.999804
     }
   },
   "aggregates": {
     "overall_avg": {
-      "ap": 0.9084756331220716,
-      "accuracy": 0.8336250000000001,
-      "auc": 0.91322775
+      "ap": 0.946821788214479,
+      "accuracy": 0.886,
+      "auc": 0.9513944999999999
     },
     "gan_avg": {
-      "ap": 0.9760710828951044,
-      "accuracy": 0.908,
-      "auc": 0.9795860000000001
+      "ap": 0.9998045588376062,
+      "accuracy": 0.99,
+      "auc": 0.999804
     },
     "diffusion_avg": {
-      "ap": 0.8988191402973525,
-      "accuracy": 0.823,
-      "auc": 0.903748
+      "ap": 0.9392528209826038,
+      "accuracy": 0.8711428571428571,
+      "auc": 0.9444788571428571
     },
-    "std_dev_ap": 0.06098427713377608,
+    "std_dev_ap": 0.06542577132740139,
     "n_generators_evaluated": 8
   }
 }

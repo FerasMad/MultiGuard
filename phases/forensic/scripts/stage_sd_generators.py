@@ -1,4 +1,11 @@
-"""Stage SD v1.4 / SD v1.5 into data/raw/GenImage_v2/ from the shimei123/Genimage zips.
+"""Stage GenImage generators into data/raw/GenImage_v2/ from the shimei123/Genimage zips.
+
+Handles ALL 8 official generators (adm, biggan, midjourney, vqdm, glide, wukong,
+sdv1_4, sdv1_5) -- each a discrete zip in the official GenImage layout
+(0_real = ImageNet ILSVRC2012 nature, 1_fake = generated). Originally written for
+the two SD generators (Track B); generalized in P17 for the all-official F-A3 fix
+(re-stage every generator from official GenImage, retiring the VisualNews nature
+substitute + the bitmind/local AI mirrors). Use --gens to stage a subset.
 
 This closes the two-generator gap (sdv1_4 + sdv1_5) that prepare_genimage_v2.py
 documented as "bitmind 404 / Drive-only". Source found May 2026:
@@ -41,8 +48,14 @@ except ImportError:
     print("FATAL: Pillow not installed", file=sys.stderr)
     sys.exit(2)
 
-# zip file stem -> output generator key
+# zip file stem -> output generator key (all 8 official generators on shimei123/Genimage)
 ZIP_TO_GEN = {
+    "ADM": "adm",
+    "BigGAN": "biggan",
+    "Midjourney": "midjourney",
+    "VQDM": "vqdm",
+    "glide": "glide",
+    "wukong": "wukong",
     "SD_v14": "sdv1_4",
     "SD_v15": "sdv1_5",
 }
@@ -112,11 +125,18 @@ def main() -> None:
     p.add_argument("--out", type=Path, default=Path("data/raw/GenImage_v2"))
     p.add_argument("--target-per-gen", type=int, default=1750)
     p.add_argument("--img-size", type=int, default=256)
+    p.add_argument(
+        "--gens",
+        nargs="+",
+        default=None,
+        help="Subset of generator keys to stage (e.g. adm biggan). Default: all 8.",
+    )
     args = p.parse_args()
 
     summary: dict = {"started_at": time.time(), "generators": {}, "img_size": args.img_size}
 
-    for zip_stem, gen in ZIP_TO_GEN.items():
+    selected = {z: g for z, g in ZIP_TO_GEN.items() if args.gens is None or g in args.gens}
+    for zip_stem, gen in selected.items():
         zpath = args.zip_dir / f"{zip_stem}.zip"
         if not zpath.exists():
             _log(f"FATAL: {zpath} not found -- download SD zips first")

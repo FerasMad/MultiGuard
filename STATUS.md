@@ -27,8 +27,14 @@ DCT stats, **retrained both forensic detectors on 8/8 generators**:
 
 | Approach | Val AP | Overall test AP (8/8) | StdDev AP |
 |----------|--------|-----------------------|-----------|
-| 1 (RGB+Fourier) | 0.9869 | **0.9876** | 0.0151 |
-| 2 (DCT) | 0.9533 | **0.9468** | 0.0654 |
+| 1 (RGB+Fourier) | 0.9851 | **0.9841** | 0.0106 |
+| 2 (DCT) | 0.9202 | **0.9085** | 0.0610 |
+
+> **P17 update — F-A3 fully resolved (official ImageNet nature for ALL 8 gens).**
+> The numbers above are now the *honest* official-nature results (was mixed-source
+> 0.9876 / 0.9468). Removing the VisualNews substitute dropped DCT AP −3.8 pp
+> (it was inflating 6 generators via a news-photo-vs-AI domain cue); RGB+Fourier is
+> robust (−0.4 pp). Before/after: [`docs/F_A3_OFFICIAL_NATURE.md`](docs/F_A3_OFFICIAL_NATURE.md).
 
 The new SD generators are the hardest (A1 ~0.97, A2 ~0.85 AP), which is why the
 8/8 average sits below the prior 6/8 figure — it now *includes* the two hardest
@@ -55,11 +61,11 @@ See [`docs/IMAGE_BRANCH_ABLATION.md`](docs/IMAGE_BRANCH_ABLATION.md) View 3.
 
 | Approach | Status | Best val AP | Overall test AP (8/8) | StdDev AP | Doc |
 |----------|--------|-------------|-----------------------|-----------|-----|
-| **2 (DCT)** | OK Shipped 8/8 | 0.9533 @ ep 13 | 0.9468 | 0.0654 | unified `phases/forensic/REPORT.md` §0 |
-| **1 (RGB + Fourier)** | OK Shipped 8/8 | **0.9869 @ ep 3** | **0.9876** | **0.0151** | (same) |
+| **2 (DCT)** | OK Shipped 8/8 (official nature) | 0.9202 @ ep 6 | 0.9085 | 0.0610 | unified `phases/forensic/REPORT.md` §0 |
+| **1 (RGB + Fourier)** | OK Shipped 8/8 (official nature) | **0.9851 @ ep 29** | **0.9841** | **0.0106** | (same) |
 
-Approach 1 beats Approach 2 by ~4 pp on Overall AP and ~4x lower variance across
-generators (StdDev 0.0151 vs 0.0654). Both pass the doctor's spec; A1 is far more
+Approach 1 beats Approach 2 by ~7.5 pp on Overall AP and ~6x lower variance across
+generators (StdDev 0.0106 vs 0.0610). Both pass the doctor's spec; A1 is far more
 consistent on the hard SD generators (A1 ~0.97 vs A2 ~0.85 AP), A2 is more
 interpretable (frequency-domain input). The prior 6/8 figures (A1 0.9979 /
 A2 0.9863, computed on the 6 easier generators only) are superseded by these
