@@ -1,0 +1,88 @@
+{
+  "ckpt": "phases\\forensic\\outputs\\dct\\forensic_dct_model.pth",
+  "per_generator": {
+    "midjourney": {
+      "generator": "midjourney",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.956855455743902,
+      "accuracy": 0.859,
+      "auc": 0.96062
+    },
+    "sdv1_4": {
+      "generator": "sdv1_4",
+      "skipped": true,
+      "reason": "test cache not found at phases\\forensic\\data\\dct_cache\\test\\sdv1_4"
+    },
+    "sdv1_5": {
+      "generator": "sdv1_5",
+      "skipped": true,
+      "reason": "test cache not found at phases\\forensic\\data\\dct_cache\\test\\sdv1_5"
+    },
+    "wukong": {
+      "generator": "wukong",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9842255050321855,
+      "accuracy": 0.931,
+      "auc": 0.984356
+    },
+    "vqdm": {
+      "generator": "vqdm",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9845622237997097,
+      "accuracy": 0.942,
+      "auc": 0.98697
+    },
+    "adm": {
+      "generator": "adm",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9967025549108058,
+      "accuracy": 0.974,
+      "auc": 0.9967199999999999
+    },
+    "glide": {
+      "generator": "glide",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.995781849118373,
+      "accuracy": 0.974,
+      "auc": 0.99659
+    },
+    "biggan": {
+      "generator": "biggan",
+      "n_samples": 1000,
+      "n_real": 500,
+      "n_fake": 500,
+      "ap": 0.9998309938529392,
+      "accuracy": 0.983,
+      "auc": 0.9998319999999999
+    }
+  },
+  "aggregates": {
+    "overall_avg": {
+      "ap": 0.9863264304096525,
+      "accuracy": 0.9438333333333333,
+      "auc": 0.9875146666666667
+    },
+    "gan_avg": {
+      "ap": 0.9998309938529392,
+      "accuracy": 0.983,
+      "auc": 0.9998319999999999
+    },
+    "diffusion_avg": {
+      "ap": 0.9836255177209952,
+      "accuracy": 0.9359999999999999,
+      "auc": 0.9850512
+    },
+    "std_dev_ap": 0.015846178066448523,
+    "n_generators_evaluated": 6
+  }
+}

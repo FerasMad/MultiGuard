@@ -4,6 +4,8 @@
     "biggan",
     "glide",
     "midjourney",
+    "sdv1_4",
+    "sdv1_5",
     "vqdm",
     "wukong"
   ],
@@ -48,6 +50,26 @@
       "test_fake": 500,
       "test_real": 500
     },
+    "sdv1_4": {
+      "ai_available": 1750,
+      "nature_available": 1750,
+      "train_fake": 1000,
+      "train_real": 1000,
+      "val_fake": 250,
+      "val_real": 250,
+      "test_fake": 500,
+      "test_real": 500
+    },
+    "sdv1_5": {
+      "ai_available": 1750,
+      "nature_available": 1750,
+      "train_fake": 1000,
+      "train_real": 1000,
+      "val_fake": 250,
+      "val_real": 250,
+      "test_fake": 500,
+      "test_real": 500
+    },
     "vqdm": {
       "ai_available": 1750,
       "nature_available": 1750,
@@ -70,10 +92,10 @@
     }
   },
   "totals": {
-    "train_real": 6000,
-    "train_fake": 6000,
-    "val_real": 1500,
-    "val_fake": 1500,
+    "train_real": 8000,
+    "train_fake": 8000,
+    "val_real": 2000,
+    "val_fake": 2000,
     "test": {
       "adm": {
         "real": 500,
@@ -88,6 +110,14 @@
         "fake": 500
       },
       "midjourney": {
+        "real": 500,
+        "fake": 500
+      },
+      "sdv1_4": {
+        "real": 500,
+        "fake": 500
+      },
+      "sdv1_5": {
         "real": 500,
         "fake": 500
       },

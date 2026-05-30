@@ -6,47 +6,33 @@ detector toward the full 8-generator + 2-approach + V4-integrated end state.
 
 ---
 
-## A. Close the 2 missing generators (SD v1.4 / SD v1.5)
+## A. Close the 2 missing generators (SD v1.4 / SD v1.5) — ✅ RESOLVED (May 2026)
 
-**Status:** Exhausted HF search (May 2026):
-- `bitmind/GenImage_StableDiffusionV1.4` and `bitmind/GenImage_StableDiffusionV1.5`: HF 404.
-- Bitmind hosts many other SDXL/FLUX/LDM datasets but no SD v1.4 or v1.5.
-- HF dataset search for "stable diffusion 1.4 detection" / "genimage sd1.4" / etc.
-  returns empty or unrelated repos (`RohanRamesh/genimage_sdv5`, `andrew-zhu/genimage-dataset`
-  are listed but contain `.gitattributes` only, no actual data).
+**Status: DONE.** The earlier conclusion ("only remaining path is the GenImage
+Google Drive") was wrong — a working HuggingFace source was found:
 
-Eval table shows them as `_skipped_`. The only remaining path is the official
-GenImage Google Drive (requires browser-side click-through — not scriptable from CI).
+- **`shimei123/Genimage`** hosts each generator as a discrete zip. `SD_v14.zip`
+  (3.55 GB) and `SD_v15.zip` (4.74 GB) carry the **official GenImage layout**:
+  `0_real/ILSVRC2012_*.JPEG` (genuine ImageNet nature) + `1_fake/` (SD-generated).
+- Pulled self-serve via `huggingface_hub` (no Drive, no browser auth), staged by
+  the new `scripts/stage_sd_generators.py` (1750 ai + 1750 nature each).
+- Because the zips ship official ImageNet nature, this **also fixes F-A3** for
+  the two SD generators (§C below) — their real class is genuine ImageNet, not
+  the VisualNews substitute.
 
-**Effort:** ~30 min download + 5 min re-eval (no retraining needed).
+The full chain was re-run end-to-end (not just test re-eval): `stage_sd_generators.py`
+→ `build_splits.py` (auto-discovers 8 gens) → `precompute_dct.py` (all splits) →
+`compute_dct_stats.py` → **retrain both detectors on 8 generators** →
+`eval_dct.py` + `eval_rgb.py`. So this is an apples-to-apples 8-gen retrain, not
+an OOD probe with the 6-gen ckpt.
 
-**Path forward when you're at a browser:**
+**Result (8/8, canonical `outputs/eval_table_combined.md`):** A1 RGB+Fourier
+overall AP **0.9876**, A2 DCT overall AP **0.9468**. SD gens are the hardest
+(A1 ~0.97, A2 ~0.85 AP). See REPORT.md §0.
 
-1. Visit https://github.com/GenImage-Dataset/GenImage README and click the Drive link.
-   Download just the SD v1.4 and SD v1.5 generator subfolders (~3 GB each).
-   Place AI images at `data/raw/GenImage_v2/sdv1_4/ai/` and `.../sdv1_5/ai/`.
-
-2. VisualNews nature is already on disk from the May 2026 run; reuse via:
-   ```bash
-   python phases/forensic/scripts/prepare_genimage_v2.py \
-       --only-gens sdv1_4 sdv1_5 --skip-bitmind
-   ```
-   (auto-detects existing AI files and only re-samples nature).
-
-3. Run `build_splits.py` again — it will add `sdv1_4/` and `sdv1_5/` test folders
-   alongside the existing 6 generators (`--symlink` to avoid duplicating disk).
-
-4. Run `precompute_dct.py --splits test` — only re-compute the new test folders;
-   train/val/dct_stats unchanged.
-
-5. Run `eval_dct.py --ckpt phases/forensic/outputs/dct/forensic_dct_model.pth`
-   — re-eval all 8 generators using the EXISTING trained checkpoint. Should
-   show real numbers in the previously-skipped rows. Doctor's full F.25 table.
-
-**Note:** if SD v1.4/v1.5 perform notably worse than the 6 trained-on generators,
-that's expected (out-of-distribution test). The detector was never trained on them.
-The proper apples-to-apples comparison would require ALSO retraining with SD samples
-in the train set (run from step 1 of REPORT §8).
+Other mirrors checked (for the record): `genimage-224` (sd15 only, no sd14),
+`TheKernel01/Tiny-GenImage` (declares SD14 label but 0 rows), `bitmind/*`
+(no SD at all). `shimei123/Genimage` was the one with both as usable zips.
 
 ---
 

@@ -1,8 +1,8 @@
 {
-  "mean": 0.11866046133414355,
-  "std": 2.7336519652844538,
-  "n_scalars": 602112000,
-  "n_files": 12000,
-  "computed_at": 1779682096.553581,
+  "mean": 0.20749410828917522,
+  "std": 2.6224525511837418,
+  "n_scalars": 802816000,
+  "n_files": 16000,
+  "computed_at": 1780107203.285397,
   "source": "phases\\forensic\\data\\dct_cache\\train"
 }

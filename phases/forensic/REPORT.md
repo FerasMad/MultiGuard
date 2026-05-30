@@ -5,9 +5,53 @@ _Build config: `phases\forensic\configs\dct_resnet50.yaml`_
 _Repo: github.com/FerasMad/MultiGuard_  
 
 
+## 0. Track B update (May 2026) — 8/8 generators + official ImageNet nature
+
+The original ship covered **6/8** generators (SD v1.4 / SD v1.5 were marked
+`_skipped_`) and used a **VisualNews** substitute for the "nature" real class.
+Both gaps are now **closed**:
+
+- **Source found:** `shimei123/Genimage` (HuggingFace) hosts each generator as a
+  discrete zip; `SD_v14.zip` (3.55 GB) + `SD_v15.zip` (4.74 GB) carry the
+  **official GenImage layout** — `0_real/` = genuine ImageNet ILSVRC2012 "nature",
+  `1_fake/` = SD-generated. Pulled self-serve via `huggingface_hub` (no Drive,
+  no browser auth). Staged by `scripts/stage_sd_generators.py` (1750 ai + 1750
+  nature each, official ImageNet nature → also fixes F-A3 for these two gens).
+- **Both detectors retrained on 8 generators** (seed 42). Train 8000/8000,
+  val 2000/2000, test 500+500 per gen. New DCT z-score: mean `0.207494`,
+  std `2.622453`, n_files `16000`.
+
+| Approach | Val AP | Test Overall AP | Test Overall Acc | Std-dev AP (8 gens) |
+|----------|--------|-----------------|------------------|---------------------|
+| A1 RGB+Fourier (`band=low+high`) | 0.9869 | **0.9876** | 0.9469 | 0.0151 |
+| A2 DCT (two-phase) | 0.9533 | **0.9468** | 0.8860 | 0.0654 |
+
+**8/8 per-generator (canonical `outputs/eval_table_combined.md`):**
+
+| Generator | Type | A1 AP | A2 AP | A1 Acc | A2 Acc |
+|-----------|------|-------|-------|--------|--------|
+| midjourney | Diffusion | 0.9759 | 0.9158 | 0.8510 | 0.7770 |
+| **sdv1_4** | Diffusion | **0.9661** | **0.8381** | 0.9130 | 0.7820 |
+| **sdv1_5** | Diffusion | **0.9670** | **0.8631** | 0.9060 | 0.7670 |
+| wukong | Diffusion | 0.9981 | 0.9828 | 0.9690 | 0.9010 |
+| vqdm | Diffusion | 0.9964 | 0.9859 | 0.9670 | 0.9310 |
+| adm | Diffusion | 0.9987 | 0.9952 | 0.9890 | 0.9630 |
+| glide | Diffusion | 0.9989 | 0.9938 | 0.9830 | 0.9770 |
+| biggan | GAN | 0.9995 | 0.9998 | 0.9970 | 0.9900 |
+
+The two new SD generators are the **hardest** (most modern); RGB+Fourier handles
+them far better than DCT (~0.97 vs ~0.85 AP). The 6-gen artifacts are preserved
+as `outputs/*.6gen.*` and `outputs/{dct,rgb}/`; the 8-gen ckpts live in
+`outputs/{dct_8gen,rgb_8gen}/forensic_*_model.pth`.
+
+> **Sections 4–6 below describe the original 6-generator run and are superseded
+> by this §0.** They are retained for provenance.
+
+---
+
 ## 1. Scope
 
-This report covers the **Approach 2** forensic image detector built per the doctor's brief (`docs/doctor-briefs/Forensic_Image_Detector_En.pdf`). It is a binary real-vs-AI-generated classifier built on the **YCbCr dual-patch DCT** representation: scipy.fftpack.dct over 8x8 and 16x16 patch grids, log-magnitude, global z-score, then a torchvision **ResNet-50** with 1-channel `conv1` (Kaiming Normal) and a `Linear(2048, 1)` head.
+This report covers **both** forensic image detectors built per the doctor's brief (`docs/doctor-briefs/Forensic_Image_Detector_En.pdf`). It is a binary real-vs-AI-generated classifier built on the **YCbCr dual-patch DCT** representation: scipy.fftpack.dct over 8x8 and 16x16 patch grids, log-magnitude, global z-score, then a torchvision **ResNet-50** with 1-channel `conv1` (Kaiming Normal) and a `Linear(2048, 1)` head.
 
 Training follows the doctor's two-phase schedule (Phase 1 freezes layer1/2, Phase 2 unfreezes and reinitializes the optimizer + scheduler), with BCEWithLogitsLoss, AdamW, ReduceLROnPlateau on val AP, and early-stop patience=5 (carrying across the phase boundary).
 
@@ -39,9 +83,9 @@ Unit test `tests/test_two_phase_trainer.py` enforces the 4 invariants at the Pha
 
 Three documented deviations (full reasoning in `docs/DECISIONS.md`, F-series):
 
-- **F-A3 (real-class source):** spec F.3 says real = ImageNet "nature" (bundled per-generator in the original GenImage Drive release). ImageNet is not on disk on the FSOS PC, so we substituted **VisualNews** (71,966 real news photos). The model still learns real-vs-AI, but the real distribution is news photography rather than ImageNet's natural scenes. To validate, one could later swap in the canonical GenImage `nature/` subset and rerun eval.
+- **F-A3 (real-class source):** spec F.3 says real = ImageNet "nature". The 6 original generators still use the **VisualNews** substitute (71,966 real news photos). **Update (§0):** the two SD generators (`sdv1_4`, `sdv1_5`) now use **genuine ImageNet ILSVRC2012 nature** (bundled in `shimei123/Genimage`'s `0_real/`), so F-A3 is resolved for those two. Replacing VisualNews for the other 6 remains optional follow-up (FOLLOWUP.md §C).
 
-- **F-A2 (missing generators):** 2 of 8 generators are excluded from this build: `sdv1_4, sdv1_5`. Reason: bitmind/GenImage_StableDiffusionV1.4 and bitmind/GenImage_StableDiffusionV1.5 return HF 404 (May 2026). The eval table marks those rows as `_skipped_`.
+- **F-A2 (missing generators): RESOLVED (§0).** Originally `sdv1_4`/`sdv1_5` were excluded because `bitmind/GenImage_StableDiffusionV1.{4,5}` return HF 404. Source found May 2026: `shimei123/Genimage` (`SD_v14.zip` / `SD_v15.zip`). Both detectors now evaluate **8/8** generators.
 
 - **F-A8 (Approach 1 checkpoint rename):** doctor's spec F.5 literally names `mask_15/rn50ft_fouriermask.pth`. Upstream `chandlerbing65nm/FakeImageDetection` renamed it to `rn50ft_spectralmask.pth` (same Fourier-domain masking, just renamed). We use the spectralmask file as the spec-intended successor. Init method recorded as: `FakeImageDetection mask_15 ckpt (rn50ft_spectralmask.pth) [deviation F-A8: upstream renamed fouriermask->spectralmask]`.
 
@@ -111,6 +155,10 @@ Stars mark new best val-AP epochs. Green shaded region = Phase 2 (epoch 6+, opti
 
 
 ## 6. Per-generator evaluation
+
+> **Superseded by §0** — the table below is the original 6-generator DCT run
+> (sdv1_4/sdv1_5 `_skipped_`). The current 8/8 numbers for both approaches are
+> in §0 and `outputs/eval_table_combined.md`.
 
 (Reproduces doctor's F.25 table format; sklearn metrics; threshold 0.5 for accuracy.)
 
