@@ -58,23 +58,49 @@ honest "does it help in the shipped model" test.
 
 **Bottom line:** the image branch is a **real but modest contributor (~2 pp F1
 overall)** whose value is concentrated in class 2 Manipulated. It does not
-hurt the Real/OOC classes. This is the expected behavior for an image-forensic
-signal whose detector currently trains on the VisualNews-as-nature substitute
-(F-A3); the forensic fix-plan's data refresh (official GenImage nature + SD
-v1.4/v1.5) is expected to raise this contribution and is tracked as the
-outstanding Stage C/D work.
+hurt the Real/OOC classes. **Track B (below) completed the forensic fix-plan's
+data refresh** -- official GenImage nature + SD v1.4/v1.5, both detectors
+retrained 8/8, `v_imgfor_corrected` regenerated, fusion retrained -- and the
+corrected image branch's contribution stayed ~flat (~1 pp), confirming this is
+a data-domain ceiling (the 5-class test images are out-of-domain for any
+GenImage-trained detector), not a detector-quality one.
 
-## Caveat -- detector still trains on the VisualNews substitute
+## View 3 -- corrected image branch (Track B: 8-gen detector + official SD nature) -- ✅ DONE
 
-These numbers use `v_imgfor` from the Approach-2 DCT detector trained with
-VisualNews-as-nature (deviation F-A3). The forensic fix-plan's Definition of
-Done requires retraining on official GenImage nature + adding SD v1.4/v1.5,
-then regenerating `cache/v4/v_imgfor_corrected/` and re-running this ablation.
-Until that data is staged (Drive-only, browser-auth), this is the best
-available image-branch ablation. See `STATUS.md` Track B.
+The forensic fix-plan's Definition of Done (retrain on official GenImage nature
++ add SD v1.4/v1.5, regenerate `cache/v4/v_imgfor_corrected/`, re-run this
+ablation) is now **complete**. Source: `shimei123/Genimage` (SD_v14.zip +
+SD_v15.zip, official GenImage layout with genuine ImageNet nature). Both
+forensic detectors were retrained on all 8 generators (RGB+Fourier overall AP
+0.9876, DCT 0.9468 -- see `phases/forensic/REPORT.md` §0), `v_imgfor_corrected`
+(16,500 shards) was regenerated from the 8-gen DCT backbone, and the 3-seed
+fusion was retrained on it (`v4_pipeline_corrected.yaml`).
+
+Inference-time leave-one-out on the **corrected** 3-seed ensemble
+(`outputs/v4/inference_ablation_corrected/summary.json`):
+
+| Variant | Test F1 | dF1 | C2 Manip | note |
+|---|---|---|---|---|
+| full (corrected) | 0.7121 | -- | 0.763 | vs shipped full 0.7149 (flat, seed noise) |
+| disable image (`v_imgfor`) | 0.7022 | **-1.0 pp** | 0.751 (-1.2 pp) | corrected image branch removal |
+| disable text (`v_textfor`) | 0.5096 | -20.3 pp | 0.738 | text still dominates C3/C4 |
+| semantic only | 0.3153 | -39.7 pp | 0.654 | -- |
+
+**What the data refresh changed:** the *standalone* forensic detector improved
+substantially (6/8 -> 8/8 generators, official ImageNet nature, RGB AP 0.988).
+But re-integrated into the 5-class pipeline the image branch stayed a minor
+contributor (removal costs ~1 pp, concentrated in C2 -- comparable to the
+shipped -2 pp within seed noise). The 5-class headline is flat (0.7121 vs
+0.7147), so the **deployed 5-class ensemble is left unchanged**; the corrected
+fusion is the documented Stage-D experiment, not a production swap. F-A3 is
+resolved for the two SD generators (their nature is now genuine ImageNet).
 
 ## Provenance
 
 - Training-time ablation: `phases/v4/scripts/train_branch_ablation.py` + `eval_branch_ablation.py` -> `docs/BRANCH_ABLATION_REPORT.md`
-- Inference-time ablation: `phases/v4/scripts/eval_inference_ablation.py` -> `outputs/v4/inference_ablation/summary.json`
+- Inference-time ablation (shipped): `phases/v4/scripts/eval_inference_ablation.py` -> `outputs/v4/inference_ablation/summary.json`
+- Inference-time ablation (corrected, Track B): same script `--config phases/v4/configs/v4_pipeline_corrected.yaml --ckpts outputs/v4/stage2_fusion_corrected_seed{42,1337,2024}/best.pt` -> `outputs/v4/inference_ablation_corrected/summary.json`
+- Corrected 3-seed ensemble eval: `phases/v4/scripts/eval_ensemble.py` -> `outputs/v4/stage2_fusion_corrected_ensemble/summary.json` (test F1 0.7121)
+- 8-gen forensic detectors + eval table: `phases/forensic/REPORT.md` §0, `phases/forensic/outputs/eval_table_combined.md`
+- SD data staging: `phases/forensic/scripts/stage_sd_generators.py` (shimei123/Genimage)
 - Image-only transfer probe (binary AP/AUC on DGM4+MMFB): `docs/IMAGE_TRANSFER_PROBE.md` (AP 0.77 / AUC 0.78)

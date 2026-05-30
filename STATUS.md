@@ -16,20 +16,54 @@ For the box-to-file mapping of the doctor's architecture diagram see
 
 ---
 
+## Track B (May 2026) — forensic 8/8 + corrected image branch ✅
+
+The two missing GenImage generators (SD v1.4 / SD v1.5) and the VisualNews-nature
+deviation (F-A3) are **resolved**. Found a self-serve HuggingFace source
+(`shimei123/Genimage`: `SD_v14.zip` + `SD_v15.zip`, official GenImage layout with
+genuine ImageNet ILSVRC2012 nature) — no Google Drive, no browser auth. Staged via
+`phases/forensic/scripts/stage_sd_generators.py`, rebuilt 8-gen splits, recomputed
+DCT stats, **retrained both forensic detectors on 8/8 generators**:
+
+| Approach | Val AP | Overall test AP (8/8) | StdDev AP |
+|----------|--------|-----------------------|-----------|
+| 1 (RGB+Fourier) | 0.9869 | **0.9876** | 0.0151 |
+| 2 (DCT) | 0.9533 | **0.9468** | 0.0654 |
+
+The new SD generators are the hardest (A1 ~0.97, A2 ~0.85 AP), which is why the
+8/8 average sits below the prior 6/8 figure — it now *includes* the two hardest
+generators rather than skipping them. Per-generator table:
+[`phases/forensic/outputs/eval_table_combined.md`](phases/forensic/outputs/eval_table_combined.md),
+narrative `phases/forensic/REPORT.md` §0.
+
+**5-class re-integration (Stage D):** regenerated `cache/v4/v_imgfor_corrected/`
+from the 8-gen DCT backbone and retrained the 3-seed fusion
+(`v4_pipeline_corrected.yaml`). Corrected ensemble **test F1 0.7121** (vs shipped
+0.7149 — flat, within seed noise); the corrected image branch contributes ~1 pp
+(removal costs −1.0 pp, C2 −1.2 pp). The image branch is confirmed a **real-but-minor
+contributor concentrated in C2/Manipulated**; the standalone forensic detector
+improved a lot but the 5-class headline is data-domain-capped. The **deployed
+5-class ensemble is unchanged** (corrected fusion is the documented experiment).
+See [`docs/IMAGE_BRANCH_ABLATION.md`](docs/IMAGE_BRANCH_ABLATION.md) View 3.
+
+---
+
 ## TL;DR
 
 **Forensic image detector** (current sprint deliverable, doctor's brief
 `docs/doctor-briefs/Forensic_Image_Detector_En.pdf`):
 
-| Approach | Status | Best val AP | Overall test AP | StdDev AP | Doc |
-|----------|--------|-------------|-----------------|-----------|-----|
-| **2 (DCT)** | OK Shipped | 0.9848 @ ep 13 | 0.9863 (6/8 gens) | 0.0158 | unified `phases/forensic/REPORT.md` |
-| **1 (RGB + Fourier)** | OK Shipped | **0.9971 @ ep 10** | **0.9979 (6/8 gens)** | **0.0023** | (same) |
+| Approach | Status | Best val AP | Overall test AP (8/8) | StdDev AP | Doc |
+|----------|--------|-------------|-----------------------|-----------|-----|
+| **2 (DCT)** | OK Shipped 8/8 | 0.9533 @ ep 13 | 0.9468 | 0.0654 | unified `phases/forensic/REPORT.md` §0 |
+| **1 (RGB + Fourier)** | OK Shipped 8/8 | **0.9869 @ ep 3** | **0.9876** | **0.0151** | (same) |
 
-Approach 1 beats Approach 2 by ~1.2 pp on Overall AP and ~7x lower variance
-across generators (StdDev 0.0023 vs 0.0158). Both approaches pass the
-doctor's spec; A1 is more consistent across diffusion generators, A2 is more
-interpretable (frequency-domain input).
+Approach 1 beats Approach 2 by ~4 pp on Overall AP and ~4x lower variance across
+generators (StdDev 0.0151 vs 0.0654). Both pass the doctor's spec; A1 is far more
+consistent on the hard SD generators (A1 ~0.97 vs A2 ~0.85 AP), A2 is more
+interpretable (frequency-domain input). The prior 6/8 figures (A1 0.9979 /
+A2 0.9863, computed on the 6 easier generators only) are superseded by these
+complete 8/8 numbers — see **Track B** above.
 
 ### External validation — MMFakeBench transfer probe
 

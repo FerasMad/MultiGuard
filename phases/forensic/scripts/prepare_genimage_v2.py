@@ -21,9 +21,14 @@ GENERATOR DATA SOURCES (this build, May 2026):
   adm         -> bitmind/GenImage_ADM     (HF parquet)
   glide       -> bitmind/GenImage_GLIDE   (HF parquet)
 
-SD v1.4 / SD v1.5 are NOT available on bitmind (HF 404), so they are excluded
-from this build. The eval table will mark those two rows as SKIPPED with a
-data-availability reason.
+SD v1.4 / SD v1.5 are not on bitmind (HF 404), so THIS script (the original
+6-generator build) excludes them. RESOLVED (May 2026, Track B): they are now
+staged separately by `stage_sd_generators.py` from `shimei123/Genimage`
+(SD_v14.zip / SD_v15.zip, official GenImage layout w/ genuine ImageNet nature).
+After that runs, `build_splits.py` auto-discovers all 8 generators. The
+`missing_generators` field written below is therefore historical for this
+script's own scope, not the repo's overall state -- see
+`phases/forensic/REPORT.md` §0 + `FOLLOWUP.md` §A.
 
 REAL CLASS DEVIATION (from doctor's spec F.3):
   Spec says real = ImageNet "nature". ImageNet is not on disk on this PC, so

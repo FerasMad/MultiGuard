@@ -1,0 +1,17 @@
+{
+  "n_seeds": 3,
+  "ckpts": [
+    "outputs\\v4\\stage2_fusion_corrected_seed42\\best.pt",
+    "outputs\\v4\\stage2_fusion_corrected_seed1337\\best.pt",
+    "outputs\\v4\\stage2_fusion_corrected_seed2024\\best.pt"
+  ],
+  "temperature": null,
+  "splits": {
+    "test": {
+      "f1_macro": 0.7121333013197214
+    },
+    "mmfakebench-transfer": {
+      "f1_macro": 0.42849846782431056
+    }
+  }
+}
