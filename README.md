@@ -6,6 +6,7 @@ KSU graduation project, Feras Madkhali.
 ## Live demo
 
 https://huggingface.co/spaces/FerasMad/multiguard-demo
+( currently unactive )
 
 ## Numbers
 
