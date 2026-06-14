@@ -61,13 +61,11 @@ def make_confusion_png() -> None:
 # Data tables shared by both MD and DOCX
 # ----------------------------------------------------------------------------
 HARDWARE = [
-    ("GPU", "2 × NVIDIA RTX 4090 (24 GB each → 48 GB total VRAM)",
-     "docs/V4_PLAN.md, docs/MULTIGUARD_SETUP.md"),
-    ("CPU", "[fill in your machine's CPU — not recorded in the repo]", "—"),
-    ("RAM (system)", "[fill in your machine's system RAM — not recorded in the repo]", "—"),
-    ("Storage", "~30 GB (code + models + small data); ~155 GB for the full datasets "
-                "(VisualNews 99 GB, DGM4 21 GB, NewsCLIPpings 21 GB, MMFakeBench 14 GB)",
-     "docs/MULTIGUARD_SETUP.md"),
+    ("GPU", "NVIDIA GeForce RTX 4070 (12 GB VRAM)", "user-provided"),
+    ("CPU", "Intel Core i5-13500 (14 cores / 20 threads)", "user-provided"),
+    ("RAM (system)", "32 GB", "user-provided"),
+    ("Storage", "~155 GB for the full datasets (VisualNews 99 GB, DGM4 21 GB, "
+                "NewsCLIPpings 21 GB, MMFakeBench 14 GB)", "docs/MULTIGUARD_SETUP.md"),
     ("CUDA", "12.4+", "docs/V4_PLAN.md, docs/MULTIGUARD_SETUP.md"),
 ]
 
