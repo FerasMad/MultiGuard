@@ -35,6 +35,26 @@ from torchvision import models
 log = logging.getLogger(__name__)
 
 
+def _require_semantic_weights_loaded(missing, *, allowed_missing_prefixes=("classifier.",),
+                                     ckpt_name: str = "") -> None:
+    """Raise if a backbone/attention weight failed to load (silent parity break).
+
+    Self-contained mirror of v4.core.checkpoints.require_semantic_weights_loaded
+    (this file is copied verbatim into the HF Space, so it can't import from v4).
+    classifier.* is the V1 binary head and is legitimately absent; anything else
+    missing means the encoder is running at random init -- the exact bug the
+    parity sweep caught -- so fail loudly here instead of mispredicting at serve time.
+    """
+    critical = [k for k in missing if not k.startswith(tuple(allowed_missing_prefixes))]
+    if critical:
+        where = f" from {ckpt_name}" if ckpt_name else ""
+        raise RuntimeError(
+            f"FND-CLIP: {len(critical)} semantic-path weight(s) failed to load{where} "
+            f"(first 5: {critical[:5]}). The encoder would run at random init and break "
+            "train/serve parity. Check that the checkpoint's parameter names match."
+        )
+
+
 class VisualStream(nn.Module):
     """ResNet50 wrapped as nn.Sequential (V1 layout: visual.features.0..)."""
 
@@ -187,11 +207,9 @@ class FNDCLIPSemanticEncoder(nn.Module):
             len(missing),
             len(unexpected),
         )
-        if len(missing) > 5:
-            log.warning(
-                "FND-CLIP: %d weights missing after load — first 5: %s",
-                len(missing), missing[:5],
-            )
+        _require_semantic_weights_loaded(
+            missing, allowed_missing_prefixes=("classifier.",), ckpt_name=p.name
+        )
 
     def forward_semantic(
         self,

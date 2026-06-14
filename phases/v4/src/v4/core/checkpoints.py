@@ -124,3 +124,35 @@ def shape_compat_filter(source_state: dict, target_state: dict) -> dict:
         for k, v in source_state.items()
         if k in target_state and target_state[k].shape == v.shape
     }
+
+
+def require_semantic_weights_loaded(
+    missing,
+    *,
+    allowed_missing_prefixes=("classifier.",),
+    ckpt_name: str = "",
+) -> None:
+    """Raise if any *semantic-path* weight failed to load from a checkpoint.
+
+    FND-CLIP is loaded with ``strict=False`` on purpose — the classifier head
+    legitimately mismatches (the V1 checkpoint is a binary OOC head, downstream
+    models use a different ``num_classes``), and the ``sem_proj`` 512->768
+    adapter is trained later, not present in the V1 ckpt. Those missing keys are
+    fine and should be passed via ``allowed_missing_prefixes``.
+
+    But if a *backbone / attention* weight is missing, the encoder silently
+    falls back to random init: ``v_semantic`` then comes from an encoder the
+    fusion head never saw, train/serve parity breaks, and Real/OOC collapse.
+    That exact silent failure is what the server parity sweep once caught
+    (273/929 weights random). This turns it into a hard error at load time
+    instead of a wrong prediction at serve time.
+    """
+    critical = [k for k in missing if not k.startswith(tuple(allowed_missing_prefixes))]
+    if critical:
+        where = f" from {ckpt_name}" if ckpt_name else ""
+        raise RuntimeError(
+            f"FND-CLIP: {len(critical)} semantic-path weight(s) failed to load{where} "
+            f"(first 5: {critical[:5]}). The encoder would run at random init and "
+            "break train/serve parity. Check that the checkpoint's parameter names "
+            "match this architecture."
+        )

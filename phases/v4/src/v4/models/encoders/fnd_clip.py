@@ -27,7 +27,7 @@ import torch.nn.functional as F
 from torch import nn
 from torchvision import models
 
-from v4.core.checkpoints import shape_compat_filter
+from v4.core.checkpoints import require_semantic_weights_loaded, shape_compat_filter
 from v4.core.logging import get_logger
 from v4.core.registry import ENCODER_REGISTRY, register
 from v4.models.encoders.base import EncoderBase
@@ -164,6 +164,14 @@ class FNDCLIPSemanticEncoder(EncoderBase):
             p.name,
             len(missing),
             len(unexpected),
+        )
+        # classifier.* (V1 binary head) and sem_proj.* (512->768 adapter, trained
+        # downstream) are legitimately absent from the V1 ckpt; any other missing
+        # weight means a silent random-init / parity break -> hard error.
+        require_semantic_weights_loaded(
+            missing,
+            allowed_missing_prefixes=("classifier.", "sem_proj."),
+            ckpt_name=p.name,
         )
 
     def forward_semantic(
