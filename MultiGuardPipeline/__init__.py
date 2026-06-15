@@ -19,7 +19,7 @@ from __future__ import annotations
 from .fusion import FusionModule
 from .forensic_text import ForensicTextEncoder
 from .image_forensic import ImageForensicEncoder
-from .main_pipeline import MainPipeline
+from .main_pipeline import MainPipeline, build_multiguard_pipeline
 from .semantic import SemanticEncoder
 
 __all__ = [
@@ -28,4 +28,5 @@ __all__ = [
     "ImageForensicEncoder",
     "FusionModule",
     "MainPipeline",
+    "build_multiguard_pipeline",
 ]

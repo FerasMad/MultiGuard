@@ -15,7 +15,7 @@ import os
 import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PKG = os.path.join(ROOT, "phases/v4/src/v4/pipeline")
+PKG = os.path.join(ROOT, "MultiGuardPipeline")
 MD_PATH = os.path.join(PKG, "TECHNICAL_DESIGN_REVIEW.md")
 OUT_HTML = os.path.join(ROOT, "reports", "Technical_Design_Review.html")
 

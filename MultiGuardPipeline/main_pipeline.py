@@ -129,6 +129,87 @@ class MainPipeline(nn.Module):
 
 
 # ---------------------------------------------------------------------- #
+# Real wiring: build a MainPipeline with the actual MultiGuard models.    #
+# Matches the architecture diagram exactly:                              #
+#   SemanticEncoder      <- FND-CLIP        (registry key "fnd_clip")     #
+#   ForensicTextEncoder  <- Qwen2-7B        (registry key "qwen2_7b")     #
+#   ImageForensicEncoder <- DCT ResNet50    (registry key "dct_forensic_v1")
+#   FusionModule         <- V3PairwiseFusion(registry key "v3_pairwise")  #
+# ---------------------------------------------------------------------- #
+def build_multiguard_pipeline(
+    config_path: str | None = None,
+    device: str = "cpu",
+    fusion_ckpt: str | None = None,
+) -> "MainPipeline":
+    """Build a ready ``MainPipeline`` wired with the REAL MultiGuard models.
+
+    The v4 registry is imported lazily (inside this function) so the rest of
+    this file stays standalone/pluggable. Mirrors ``app/server.py:_load_server``.
+
+    Args:
+        config_path: optional YAML with ``encoders`` + ``fusion`` specs
+                     (same schema as ``app/server_config.yaml``). If omitted,
+                     the defaults below match the deployed architecture.
+        device:      device to place the assembled pipeline on.
+        fusion_ckpt: optional path to a trained fusion checkpoint.
+    """
+    import os
+    import sys
+
+    # make the v4 package importable without installing it
+    here = os.path.dirname(os.path.abspath(__file__))
+    v4_src = os.path.normpath(os.path.join(here, "..", "phases", "v4", "src"))
+    if v4_src not in sys.path:
+        sys.path.insert(0, v4_src)
+
+    from v4.core.registry import build_encoder, build_fusion, import_all
+
+    import_all()
+
+    # default specs == the architecture diagram (DCT ResNet50 image branch)
+    enc_specs = {
+        "semantic": {"type": "fnd_clip", "feat_dim": 512, "output_dim": 768},
+        "image": {"type": "dct_forensic_v1", "out_dim": 768},
+        "text": {"type": "qwen2_7b", "hidden_size": 3584, "output_dim": 768},
+    }
+    fusion_spec: dict = {"type": "v3_pairwise", "feat_dim": 768, "fused_dim": 1024,
+                         "num_classes": 5}
+
+    if config_path is not None:
+        import yaml
+
+        with open(config_path, encoding="utf-8") as fh:
+            cfg = yaml.safe_load(fh)
+        enc_specs = cfg["encoders"]
+        fusion_spec = cfg["fusion"]
+
+    # Layer 3 — build the real backbones OUTSIDE the wrappers
+    semantic_model = build_encoder(dict(enc_specs["semantic"]))
+    image_model = build_encoder(dict(enc_specs["image"]))
+    text_model = build_encoder(dict(enc_specs["text"]))
+
+    # Layer 2 — inject them into the pluggable wrappers (out_dim auto-read)
+    semantic = SemanticEncoder(semantic_model)
+    image = ImageForensicEncoder(image_model)
+    text = ForensicTextEncoder(text_model)
+
+    # fusion input width flows from the encoders — no hardcoded dim
+    fspec = dict(fusion_spec)
+    fspec.setdefault("feat_dim", semantic.out_dim)
+    fspec.pop("ckpt", None)
+    fusion_model = build_fusion(fspec)
+    if fusion_ckpt and os.path.exists(fusion_ckpt):
+        from v4.core.checkpoints import load_checkpoint
+
+        ck = load_checkpoint(fusion_ckpt, map_location=device)
+        fusion_model.load_state_dict(ck["model_state"])
+    fusion = FusionModule(fusion_model)
+
+    # Layer 1 — the orchestrator that wires everything together
+    return MainPipeline(semantic, image, text, fusion).to(device)
+
+
+# ---------------------------------------------------------------------- #
 # Demo: dummy models prove the wiring without any real backbones.         #
 # ---------------------------------------------------------------------- #
 def _demo() -> None:

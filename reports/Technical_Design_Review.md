@@ -1,6 +1,6 @@
 # MultiGuard Pluggable Pipeline — Technical Design Review
 
-> Scope: the dependency-injection pipeline under `phases/v4/src/v4/pipeline/`
+> Scope: the dependency-injection pipeline under `MultiGuardPipeline/`
 > (5 single-class files). This is a comprehensive review: Architecture, a
 > per-class reference, Data Flow, Control Flow, Component Integration, an
 > Extensibility Guide, Evaluation Methodology, Verification, and Analysis —
