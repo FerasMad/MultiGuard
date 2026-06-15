@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import base64
 import html
 import os
 import re
@@ -43,6 +44,22 @@ def inline(text: str) -> str:
 
 def cell(text: str) -> str:
     return inline(text.replace("\\|", "|").strip())
+
+
+def img_data_uri(src: str) -> str:
+    """Resolve a local image path and return a base64 data URI (self-contained)."""
+    candidates = [
+        os.path.join(os.path.dirname(MD_PATH), src),
+        os.path.join(ROOT, "reports", os.path.basename(src)),
+        os.path.join(ROOT, src),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            with open(path, "rb") as fh:
+                b64 = base64.b64encode(fh.read()).decode("ascii")
+            ext = os.path.splitext(path)[1].lstrip(".") or "png"
+            return f"data:image/{ext};base64,{b64}"
+    return src  # fall back to the raw path if not found
 
 
 def md_to_html(md: str) -> str:
@@ -98,6 +115,18 @@ def md_to_html(md: str) -> str:
 
         if re.match(r"^\s*---+\s*$", line):
             out.append("<hr/>")
+            i += 1
+            continue
+
+        # standalone image  ![alt](src)
+        im = re.match(r"^\s*!\[(.*?)\]\((.*?)\)\s*$", line)
+        if im:
+            alt, src = im.group(1), im.group(2)
+            uri = img_data_uri(src)
+            out.append(
+                f'<figure><img src="{uri}" alt="{html.escape(alt)}"/>'
+                f"<figcaption>{html.escape(alt)}</figcaption></figure>"
+            )
             i += 1
             continue
 
@@ -162,6 +191,9 @@ hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 .toc .lvl3{margin-left:18px;font-size:.9em}
 .meta{color:var(--muted);font-size:.86rem}
 .filehdr{margin-top:1.6em;font-family:Consolas,monospace;font-weight:700;color:#3730a3}
+figure{margin:1.2em 0;text-align:center}
+figure img{max-width:560px;width:100%;border:1px solid var(--line);border-radius:8px}
+figcaption{color:var(--muted);font-size:.85rem;margin-top:.4em}
 """
 
 CDN = """
