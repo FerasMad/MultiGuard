@@ -6,8 +6,6 @@ KSU graduation project, Feras Madkhali.
 ## Live demo
 
 https://huggingface.co/spaces/FerasMad/multiguard-demo
-( currently unactive )
-
 ## Numbers
 
 **V4 5-class pipeline** (FND-CLIP + DCT-Forensic + Qwen2-7B + V3PairwiseFusion, honest-path retrain):
