@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MultiGuard Pluggable Pipeline — Technical Design Review</title>
+<style>
+:root{--fg:#1f2933;--muted:#52606d;--accent:#5b21b6;--line:#e4e7eb;--bg:#fff;--code:#f5f3ff;}
+*{box-sizing:border-box}
+body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--fg);
+  line-height:1.6;max-width:980px;margin:0 auto;padding:32px 24px 80px;background:var(--bg);}
+h1{font-size:1.9rem;border-bottom:3px solid var(--accent);padding-bottom:.3em;margin-top:0}
+h2{font-size:1.4rem;margin-top:2em;border-bottom:1px solid var(--line);padding-bottom:.25em}
+h3{font-size:1.13rem;margin-top:1.5em;color:#3730a3}
+h4{font-size:1rem;margin-top:1.2em;color:var(--muted)}
+p,li{font-size:.96rem}
+code{background:var(--code);color:#5b21b6;padding:.12em .35em;border-radius:4px;
+  font-family:Consolas,Menlo,monospace;font-size:.86em}
+pre{background:#0f172a;color:#e2e8f0;padding:16px;border-radius:8px;overflow:auto;font-size:.82rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0;font-size:inherit}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.9rem}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:#f7f5ff}
+tr:nth-child(even) td{background:#fafafa}
+blockquote{border-left:4px solid var(--accent);margin:1em 0;padding:.4em 1em;background:#faf8ff;color:var(--muted)}
+hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+.mermaid{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;margin:1em 0;text-align:center}
+.toc{background:#faf8ff;border:1px solid var(--line);border-radius:8px;padding:14px 22px;margin:1.5em 0}
+.toc a{color:var(--accent);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.toc .lvl3{margin-left:18px;font-size:.9em}
+.meta{color:var(--muted);font-size:.86rem}
+.filehdr{margin-top:1.6em;font-family:Consolas,monospace;font-weight:700;color:#3730a3}
+</style>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.hljs)hljs.highlightAll();});</script>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({startOnLoad:true, theme:'neutral'});
+</script>
+
+</head>
+<body>
+<p class="meta">MultiGuard · Technical Design Review · pluggable pipeline (phases/v4/src/v4/pipeline)</p>
+<div class="toc"><strong>Contents</strong><div class="lvl2"><a href="#0-summary">0. Summary</a></div><div class="lvl2"><a href="#1-architecture-المعمارية">1. Architecture (المعمارية)</a></div><div class="lvl2"><a href="#2-data-flow-مسار-البيانات">2. Data Flow (مسار البيانات)</a></div><div class="lvl2"><a href="#3-control-flow-تسلسل-التنفيذ">3. Control Flow (تسلسل التنفيذ)</a></div><div class="lvl3"><a href="#31-construction-mainpipelinefrom_models">3.1 Construction (`MainPipeline.from_models`)</a></div><div class="lvl3"><a href="#32-inference-mainpipelineforward">3.2 Inference (`MainPipeline.forward`)</a></div><div class="lvl2"><a href="#4-component-integration-تكامل-المكونات">4. Component Integration (تكامل المكوّنات)</a></div><div class="lvl3"><a href="#41-contract-each-injected-model-must-satisfy">4.1 Contract each injected model must satisfy</a></div><div class="lvl3"><a href="#42-integration-with-the-real-multiguard-stack">4.2 Integration with the real MultiGuard stack</a></div><div class="lvl2"><a href="#5-extensibility-guide-adding-swapping-a-model-دليل-إضافة-نموذج-جديد">5. Extensibility Guide — adding / swapping a model (دليل إضافة نموذج جديد)</a></div><div class="lvl3"><a href="#51-swap-a-model-in-an-existing-branch-the-common-case">5.1 Swap a model in an existing branch (the common case)</a></div><div class="lvl3"><a href="#52-add-a-brand-new-modality-a-4th-branch">5.2 Add a brand-new modality (a 4th branch)</a></div><div class="lvl2"><a href="#6-evaluation-methodology-منهجية-التقييم">6. Evaluation Methodology (منهجية التقييم)</a></div><div class="lvl2"><a href="#7-verification-status">7. Verification status</a></div><div class="lvl2"><a href="#8-analysis-notes-تحليلنا-وملاحظاتنا">8. Analysis &amp; Notes (تحليلنا وملاحظاتنا)</a></div><div class="lvl3"><a href="#81-strengths">8.1 Strengths</a></div><div class="lvl3"><a href="#82-deliberate-trade-offs">8.2 Deliberate trade-offs</a></div><div class="lvl3"><a href="#83-limitations-risks">8.3 Limitations / risks</a></div><div class="lvl3"><a href="#84-model-quality-notes-separate-from-pipeline-design">8.4 Model-quality notes (separate from pipeline design)</a></div><div class="lvl3"><a href="#85-recommendations">8.5 Recommendations</a></div></div>
+<h1 id="multiguard-pluggable-pipeline-technical-design-review">MultiGuard Pluggable Pipeline — Technical Design Review</h1>
+<blockquote>Scope: the dependency-injection pipeline under <code>phases/v4/src/v4/pipeline/</code> (5 single-class files). This review covers Architecture, Data Flow, Control Flow, Component Integration, an Extensibility Guide, the Evaluation Methodology, and our analysis &amp; notes.</blockquote>
+<hr/>
+<h2 id="0-summary">0. Summary</h2>
+<p>The pipeline was refactored from a &quot;build-it-inside&quot; design into a **pluggable,</p>
+<p>dependency-injection<strong> design. Every model is </strong>passed in from the outside**;</p>
+<p>no wrapper builds a model. Each wrapper <strong>auto-infers its <code>out_dim</code></strong> (no</p>
+<p>hardcoded dimensions). The four branch files are <strong>fully decoupled</strong> (they never</p>
+<p>import each other); only <code>main_pipeline.py</code> wires them together.</p>
+<table><thead><tr><th>Goal</th><th>How it is met</th></tr></thead><tbody><tr><td>Pluggable / any model</td><td>Models injected via <code>__init__</code>; wrappers are model-agnostic</td></tr><tr><td>No hardcoded dimensions</td><td><code>out_dim</code> inferred from a probe forward (or a model attribute)</td></tr><tr><td>Strict decoupling</td><td>Branch files import only <code>torch</code> + stdlib; never each other</td></tr><tr><td>Single orchestrator</td><td>Only <code>MainPipeline</code> imports the four wrappers</td></tr><tr><td>Swap a model = edit one file</td><td>Build a different model, pass it to the matching wrapper</td></tr></tbody></table>
+<hr/>
+<h2 id="1-architecture-المعمارية">1. Architecture (المعمارية)</h2>
+<p>Five units, <strong>one class per file</strong>:</p>
+<table><thead><tr><th>File</th><th>Class</th><th>Responsibility</th></tr></thead><tbody><tr><td><code>semantic.py</code></td><td><code>SemanticEncoder</code></td><td>wrap the semantic model → <code>v_semantic</code></td></tr><tr><td><code>forensic_text.py</code></td><td><code>ForensicTextEncoder</code></td><td>wrap the text-forensic model → <code>v_textfor</code></td></tr><tr><td><code>image_forensic.py</code></td><td><code>ImageForensicEncoder</code></td><td>wrap the image-forensic model → <code>v_imgfor</code></td></tr><tr><td><code>fusion.py</code></td><td><code>FusionModule</code></td><td>wrap the fusion model → logits dict</td></tr><tr><td><code>main_pipeline.py</code></td><td><code>MainPipeline</code></td><td>orchestrate the four; produce final output</td></tr></tbody></table>
+<p>All wrappers subclass <code>torch.nn.Module</code>, so the pipeline is a normal PyTorch</p>
+<p>module (works with <code>.to(device)</code>, <code>.eval()</code>, <code>state_dict</code>, autograd, etc.).</p>
+<div class="mermaid">flowchart LR
+    subgraph MP[&quot;MainPipeline (orchestrator — the only wirer)&quot;]
+        direction TB
+        SEM[&quot;SemanticEncoder&lt;br/&gt;wraps injected model&quot;]
+        TXT[&quot;ForensicTextEncoder&lt;br/&gt;wraps injected model&quot;]
+        IMG[&quot;ImageForensicEncoder&lt;br/&gt;wraps injected model&quot;]
+        FUS[&quot;FusionModule&lt;br/&gt;wraps injected model&quot;]
+    end
+    SEM -. &quot;no import&quot; .- TXT
+    TXT -. &quot;no import&quot; .- IMG
+    SEM --&gt; FUS
+    TXT --&gt; FUS
+    IMG --&gt; FUS</div>
+<p><strong>Design principles</strong></p>
+<ul><li><strong>Dependency injection</strong> — the wrapper receives a ready <code>nn.Module</code>; it raises</li></ul>
+<p>  <code>TypeError</code> if you pass anything else. It never constructs a backbone.</p>
+<ul><li><strong>Auto <code>out_dim</code></strong> — resolved at construction time, in priority order:</li></ul>
+<ol><li><strong>Probe forward</strong> (source of truth): run the injected model once on a</li></ol>
+<p>     supplied <code>example_input</code> under <code>eval()</code> + <code>no_grad()</code> and read <code>out.shape[-1]</code>.</p>
+<ol><li><strong>Attribute fallback</strong>: read the first positive int among</li></ol>
+<p>     <code>(&quot;out_dim&quot;,&quot;output_dim&quot;,&quot;embed_dim&quot;,&quot;hidden_size&quot;)</code> for encoders, or</p>
+<p>     <code>(&quot;out_dim&quot;,&quot;output_dim&quot;,&quot;num_classes&quot;)</code> for fusion.</p>
+<ol><li>Otherwise raise a clear <code>ValueError</code>.</li></ol>
+<ul><li><strong>Strict decoupling</strong> — enforced by import discipline (verified via grep:</li></ul>
+<p>  only <code>main_pipeline.py</code> and <code>__init__.py</code> import the wrappers).</p>
+<hr/>
+<h2 id="2-data-flow-مسار-البيانات">2. Data Flow (مسار البيانات)</h2>
+<p>The three encoders consume one <strong>merged batch dict</strong> (each picks only the keys it</p>
+<p>needs) and emit fixed-width vectors; the fusion consumes the three vectors and</p>
+<p>emits a logits dict.</p>
+<table><thead><tr><th>Stage</th><th>Input</th><th>Output</th></tr></thead><tbody><tr><td><code>SemanticEncoder</code></td><td><code>batch</code> (image + BERT/CLIP tensors)</td><td><code>v_semantic [B, out_dim]</code></td></tr><tr><td><code>ForensicTextEncoder</code></td><td><code>batch</code> (text features) or raw <code>text</code></td><td><code>v_textfor [B, out_dim]</code></td></tr><tr><td><code>ImageForensicEncoder</code></td><td><code>batch</code> (<code>v_imgfor_dct</code>)</td><td><code>v_imgfor [B, out_dim]</code></td></tr><tr><td><code>FusionModule</code></td><td><code>{v_semantic, v_imgfor, v_textfor}</code></td><td><code>{main_logits [B,5], aux_logits [B,2], fused [B,1024]}</code></td></tr></tbody></table>
+<p>With the real MultiGuard models, every encoder <code>out_dim = 768</code> and the fusion</p>
+<p><code>out_dim = 5</code> (number of classes).</p>
+<div class="mermaid">flowchart LR
+    IN[&quot;batch dict (+ optional raw text)&quot;]
+    IN --&gt; SEM[&quot;SemanticEncoder&quot;] --&gt; VS[&quot;v_semantic [B,768]&quot;]
+    IN --&gt; IMG[&quot;ImageForensicEncoder&quot;] --&gt; VI[&quot;v_imgfor [B,768]&quot;]
+    IN --&gt; TXT[&quot;ForensicTextEncoder&quot;] --&gt; VT[&quot;v_textfor [B,768]&quot;]
+    VS --&gt; FUS[&quot;FusionModule&quot;]
+    VI --&gt; FUS
+    VT --&gt; FUS
+    FUS --&gt; OUT[&quot;main_logits [B,5]&lt;br/&gt;aux_logits [B,2]&lt;br/&gt;fused [B,1024]&quot;]</div>
+<p><strong>Key convention:</strong> a single batch dict drives all three encoders because each</p>
+<p>injected model selects its own keys (e.g. the image model reads <code>v_imgfor_dct</code>).</p>
+<p><code>MainPipeline</code> does no per-encoder input routing.</p>
+<hr/>
+<h2 id="3-control-flow-تسلسل-التنفيذ">3. Control Flow (تسلسل التنفيذ)</h2>
+<p>There are two distinct phases: <strong>construction</strong> (dimensions resolved once) and</p>
+<p><strong>inference</strong> (per-batch forward).</p>
+<h3 id="31-construction-mainpipelinefrom_models">3.1 Construction (<code>MainPipeline.from_models</code>)</h3>
+<ol><li>Build the three encoder wrappers → each runs its <code>out_dim</code> inference.</li><li>Read <code>semantic.out_dim</code>, <code>image.out_dim</code>, <code>text.out_dim</code>.</li><li>Call <code>fusion_builder(d_sem, d_img, d_txt)</code> to build the fusion model <strong>outside</strong></li></ol>
+<p>   using those widths (so fusion&#x27;s input dims are not hardcoded either).</p>
+<ol><li>Build a probe feature dict (<code>torch.zeros(2, d)</code> per branch — batch ≥ 2 so</li></ol>
+<p>   <code>BatchNorm1d</code> survives) and construct <code>FusionModule</code>, which probes its <code>out_dim</code>.</p>
+<div class="mermaid">sequenceDiagram
+    participant U as caller
+    participant MP as MainPipeline.from_models
+    participant E as Encoder wrappers
+    participant F as FusionModule
+    U-&gt;&gt;MP: raw models + fusion_builder + examples
+    MP-&gt;&gt;E: construct (probe out_dim)
+    E--&gt;&gt;MP: out_dim (768 each)
+    MP-&gt;&gt;MP: fusion_builder(d_sem,d_img,d_txt)
+    MP-&gt;&gt;F: construct with probe features (B&gt;=2)
+    F--&gt;&gt;MP: out_dim (5)
+    MP--&gt;&gt;U: MainPipeline</div>
+<h3 id="32-inference-mainpipelineforward">3.2 Inference (<code>MainPipeline.forward</code>)</h3>
+<ol><li><code>v_semantic = semantic(batch)</code></li><li><code>v_imgfor = image(batch)</code></li><li><code>v_textfor = text.forward_text(text)</code> if raw <code>text</code> is given, else <code>text(batch)</code></li><li>assemble <code>features = {k_sem: …, k_img: …, k_txt: …}</code></li><li><code>return fusion(features)</code> → <code>{main_logits, aux_logits, fused}</code></li></ol>
+<p>The probe runs under <code>eval()</code>/<code>no_grad()</code> and **restores the model&#x27;s prior</p>
+<p>training mode** afterwards (<code>try/finally</code>), so construction has no side effects</p>
+<p>on training state.</p>
+<hr/>
+<h2 id="4-component-integration-تكامل-المكونات">4. Component Integration (تكامل المكوّنات)</h2>
+<h3 id="41-contract-each-injected-model-must-satisfy">4.1 Contract each injected model must satisfy</h3>
+<table><thead><tr><th>Wrapper</th><th>Model <code>forward</code> input</th><th>Model <code>forward</code> output</th></tr></thead><tbody><tr><td><code>SemanticEncoder</code></td><td>the batch object you pass</td><td><code>Tensor [B, D]</code></td></tr><tr><td><code>ForensicTextEncoder</code></td><td>the batch object you pass</td><td><code>Tensor [B, D]</code> (+ optional <code>runtime_forward(text)</code>)</td></tr><tr><td><code>ImageForensicEncoder</code></td><td>the batch object you pass</td><td><code>Tensor [B, D]</code></td></tr><tr><td><code>FusionModule</code></td><td>feature dict</td><td><code>Tensor</code> <strong>or</strong> dict containing a <code>Tensor</code> (default key <code>main_logits</code>)</td></tr></tbody></table>
+<p>If the model already exposes a dimension attribute (<code>output_dim</code>, <code>num_classes</code>,</p>
+<p>…), no <code>example_input</code> is needed — the wrapper reads it directly.</p>
+<h3 id="42-integration-with-the-real-multiguard-stack">4.2 Integration with the real MultiGuard stack</h3>
+<p>The wrappers are drop-in over the existing registry-built encoders/fusion:</p>
+<pre><code class="language-python">from v4.core.registry import build_encoder, build_fusion, import_all
+from v4.pipeline import MainPipeline
+
+import_all()
+semantic_model = build_encoder({&quot;type&quot;: &quot;fnd_clip&quot;, &quot;feat_dim&quot;: 512, &quot;output_dim&quot;: 768})
+image_model    = build_encoder({&quot;type&quot;: &quot;univfd&quot;,   &quot;out_dim&quot;: 768})
+text_model     = build_encoder({&quot;type&quot;: &quot;qwen2_7b&quot;, &quot;hidden_size&quot;: 3584, &quot;output_dim&quot;: 768})
+
+pipe = MainPipeline.from_models(
+    semantic_model=semantic_model,
+    image_model=image_model,
+    text_model=text_model,
+    fusion_builder=lambda ds, di, dt: build_fusion({&quot;type&quot;: &quot;v3_pairwise&quot;,
+                                                    &quot;feat_dim&quot;: ds, &quot;num_classes&quot;: 5}),
+)
+# these encoders expose output_dim, so no example inputs are required
+out = pipe(batch, text=raw_text)   # {&#x27;main_logits&#x27;:[B,5], &#x27;aux_logits&#x27;:[B,2], &#x27;fused&#x27;:[B,1024]}</code></pre>
+<p>This mirrors the current <code>app/server.py</code> inference block</p>
+<p>(<code>features = {...}; fusion(features)</code>), so the pipeline can replace it without</p>
+<p>behaviour change.</p>
+<hr/>
+<h2 id="5-extensibility-guide-adding-swapping-a-model-دليل-إضافة-نموذج-جديد">5. Extensibility Guide — adding / swapping a model (دليل إضافة نموذج جديد)</h2>
+<h3 id="51-swap-a-model-in-an-existing-branch-the-common-case">5.1 Swap a model in an existing branch (the common case)</h3>
+<p>Edit <strong>only</strong> that branch&#x27;s call site — build a different <code>nn.Module</code> and inject</p>
+<p>it. Nothing else changes; the fusion adapts because its input width comes from</p>
+<p>the encoder&#x27;s <code>out_dim</code>.</p>
+<pre><code class="language-python"># Example: replace the image-forensic backbone with a new detector.
+my_image_model = MyNewImageNet(out_dim=1024)        # any nn.Module -&gt; [B,1024]
+img = ImageForensicEncoder(
+    my_image_model,
+    example_input={&quot;v_imgfor_dct&quot;: torch.zeros(2, 1, 224, 224)},  # if no out_dim attr
+)
+assert img.out_dim == 1024     # inferred automatically
+
+# rebuild the pipeline; fusion is constructed from the new dims
+pipe = MainPipeline.from_models(
+    semantic_model=..., image_model=my_image_model, text_model=...,
+    fusion_builder=lambda ds, di, dt: build_fusion({&quot;type&quot;: &quot;v3_pairwise&quot;,
+                                                    &quot;feat_dim&quot;: ds, &quot;num_classes&quot;: 5}),
+    image_example={&quot;v_imgfor_dct&quot;: torch.zeros(2, 1, 224, 224)},
+)</code></pre>
+<p><strong>Rules for a new model</strong></p>
+<ol><li>It must be an <code>nn.Module</code>.</li><li>Its <code>forward</code> must return <code>Tensor [B, D]</code> (fusion may return a dict).</li><li>Either expose a dimension attribute <strong>or</strong> pass an <code>example_input</code>.</li><li>If it needs a runtime/raw path, implement <code>runtime_forward(text)</code> (text branch).</li></ol>
+<h3 id="52-add-a-brand-new-modality-a-4th-branch">5.2 Add a brand-new modality (a 4th branch)</h3>
+<p>This is the one case that touches more than one file (by design): create a new</p>
+<p>single-class wrapper file (e.g. <code>audio_forensic.py</code>), and update <strong><code>fusion</code></strong></p>
+<p>(to accept the extra feature) and <strong><code>main_pipeline</code></strong> (to wire it and add the</p>
+<p>key). The three existing branch files stay untouched. See §8 for why this is the</p>
+<p>correct boundary of the &quot;edit one file&quot; guarantee.</p>
+<hr/>
+<h2 id="6-evaluation-methodology-منهجية-التقييم">6. Evaluation Methodology (منهجية التقييم)</h2>
+<p>The pipeline emits <code>main_logits [B,5]</code>, so evaluation is identical to the</p>
+<p>existing V4 protocol.</p>
+<ul><li><strong>Task / labels:</strong> 5-class — `0 Real · 1 Out-of-Context · 2 Manipulated ·</li></ul>
+<p>  3 AI-Text · 4 Fully-Fabricated`.</p>
+<ul><li><strong>Test set:</strong> 2,475 held-out samples, <strong>balanced</strong> (495 per class).</li><li><strong>Primary metric:</strong> <strong>F1-macro</strong> (equal weight per class). Also report</li></ul>
+<p>  accuracy, per-class precision/recall/F1, and the confusion matrix.</p>
+<ul><li><strong>Deployment setting:</strong> 3-seed ensemble (seeds 42 / 1337 / 2024,</li></ul>
+<p>  softmax-averaged) + temperature calibration.</p>
+<ul><li><strong>Ablation — two complementary methods:</strong></li><li>*Training-time branch ablation*: train with subsets of branches</li></ul>
+<p>    (semantic-only, +text, +image, all) to measure each branch&#x27;s contribution.</p>
+<ul><li>*Inference-time leave-one-out*: zero a branch on the trained model to</li></ul>
+<p>    measure dependence.</p>
+<ul><li><strong>External transfer:</strong> MMFakeBench zero-shot, with a log-prior bias correction</li></ul>
+<p>  for class imbalance.</p>
+<p><strong>Headline results (deployed ensemble):</strong> F1-macro <strong>0.7149</strong>, accuracy</p>
+<p><strong>0.7305</strong>. Per-class F1: Real 0.397 · OOC 0.442 · Manipulated 0.757 ·</p>
+<p>AI-Text 0.989 · Fully-Fabricated 0.990. (Full tables + confusion matrix in</p>
+<p><code>reports/Experimental_Setup_MultiGuard.*</code>.)</p>
+<p><strong>How to evaluate the pluggable pipeline:</strong> wrap the trained models with</p>
+<p><code>MainPipeline.from_models</code>, run the test loader through <code>pipe(batch)</code>, take</p>
+<p><code>argmax(main_logits)</code>, and feed predictions to the existing</p>
+<p><code>v4.evaluation</code> reporting (classification report + confusion matrix). Output is</p>
+<p>bit-compatible with the current path.</p>
+<hr/>
+<h2 id="7-verification-status">7. Verification status</h2>
+<p>All checks were run and pass:</p>
+<ul><li><code>python main_pipeline.py</code> → end-to-end demo with dummy models of <strong>different</strong></li></ul>
+<p>  widths (768 / 512 / 256) → <code>out_dim</code> auto-inferred, <code>main_logits [4,5]</code>.</p>
+<ul><li>Edge cases: attribute fallback; probe overrides a stale attribute;</li></ul>
+<p>  <code>BatchNorm1d</code> survives the probe (eval + batch 2); clear error when neither</p>
+<p>  source is available.</p>
+<ul><li>Decoupling: grep confirms the four branch files do not import each other; only</li></ul>
+<p>  <code>main_pipeline.py</code> / <code>__init__.py</code> import them.</p>
+<ul><li>One class per branch file; no hardcoded model dimensions in the four wrappers.</li></ul>
+<hr/>
+<h2 id="8-analysis-notes-تحليلنا-وملاحظاتنا">8. Analysis &amp; Notes (تحليلنا وملاحظاتنا)</h2>
+<h3 id="81-strengths">8.1 Strengths</h3>
+<ul><li><strong>True dependency injection</strong> — wrappers are model-agnostic and trivially</li></ul>
+<p>  unit-testable with dummy modules.</p>
+<ul><li><strong>No hardcoded dimensions</strong> — <code>out_dim</code> flows from probe/attribute, so swapping</li></ul>
+<p>  a model can change widths without editing the fusion or classifier by hand.</p>
+<ul><li><strong>Decoupling is structural, not conventional</strong> — enforced by imports and</li></ul>
+<p>  verifiable with a one-line grep.</p>
+<ul><li><strong>Side-effect-free construction</strong> — probe restores training mode; runs under</li></ul>
+<p>  <code>no_grad()</code>.</p>
+<h3 id="82-deliberate-trade-offs">8.2 Deliberate trade-offs</h3>
+<ul><li><strong>Probe vs. attribute ordering.</strong> The probe is the source of truth, but we</li></ul>
+<p>  deliberately *fall back* to attributes so construction never forces a heavy</p>
+<p>  backbone to run (e.g. Qwen2-7B). The text wrapper specifically avoids probing</p>
+<p>  via <code>runtime_forward</code> (which would load ~15 GB) and only probes the cheap</p>
+<p>  cached path.</p>
+<ul><li><strong><code>BatchNorm1d</code> constraint.</strong> The classifier uses <code>BatchNorm1d</code>, which fails in</li></ul>
+<p>  train mode / batch 1. The probe therefore forces <code>eval()</code> and the factory uses</p>
+<p>  batch ≥ 2. This is baked into <code>from_models</code>.</p>
+<ul><li><strong><code>out_dim</code> logic is duplicated across the four files.</strong> To honour the &quot;exactly</li></ul>
+<p>  5 files / no shared helper&quot; constraint, the ~15-line probe is inlined in each</p>
+<p>  wrapper instead of living in a 6th utility module. This trades a little DRY for</p>
+<p>  strict decoupling; if that constraint is relaxed, a <code>_probe.py</code> leaf utility</p>
+<p>  would remove the duplication without coupling the branches.</p>
+<ul><li><strong>Fusion has two meaningful widths</strong> (<code>num_classes</code> and <code>fused_dim</code>). We default</li></ul>
+<p>  <code>out_dim</code> to <code>main_logits</code> (classes) and expose <code>out_key</code> to switch to <code>fused</code></p>
+<p>  when a downstream stage needs the fused vector.</p>
+<h3 id="83-limitations-risks">8.3 Limitations / risks</h3>
+<ul><li><strong>Shape assumption.</strong> <code>out_dim</code> is <code>out.shape[-1]</code>; models returning</li></ul>
+<p>  <code>[B, T, D]</code> or tuples need an adapter (the wrappers expect <code>[B, D]</code>).</p>
+<ul><li><strong>&quot;Edit one file&quot; is about swapping, not adding modalities.</strong> Swapping a model</li></ul>
+<p>  within a branch is one-file. Adding a *new* branch necessarily touches <code>fusion</code></p>
+<p>  + <code>main_pipeline</code> (they must learn the new feature) — this is the right</p>
+<p>  boundary, but worth stating explicitly.</p>
+<ul><li><strong>Device ownership.</strong> Wrappers don&#x27;t move the injected model to a device; the</li></ul>
+<p>  caller does (the probe only moves the *example input* to the model&#x27;s device).</p>
+<ul><li><strong>Pass-through outputs.</strong> <code>aux_logits</code> / <code>fused</code> are returned untouched; the</li></ul>
+<p>  pipeline does not interpret them.</p>
+<h3 id="84-model-quality-notes-separate-from-pipeline-design">8.4 Model-quality notes (separate from pipeline design)</h3>
+<p>These come from the *models*, not the wiring, and are unchanged by this refactor:</p>
+<ul><li><strong>Real ↔ OOC is at-chance</strong> (F1 ≈ 0.40 / 0.44) — the frozen FND-CLIP can&#x27;t do</li></ul>
+<p>  the cross-modal alignment (linear-probe AUC ≈ 0.51). A data/encoder ceiling.</p>
+<ul><li><strong>Classes 3/4 are near-perfect</strong> (F1 ≈ 0.99) — the Qwen text branch isolates</li></ul>
+<p>  AI-written text cleanly; on arbitrary human-plausible AI text the margin</p>
+<p>  shrinks.</p>
+<ul><li><strong>DCT image detector is weak on MidJourney/VQDM</strong> (AP ≈ 0.83).</li></ul>
+<h3 id="85-recommendations">8.5 Recommendations</h3>
+<ol><li>Add the dummy-model checks as a committed <code>tests/</code> unit test.</li><li>Optionally support an <code>example_factory</code> (lazy callable) for device-aware probes.</li><li>Wire <code>MainPipeline</code> into <code>app/server.py</code> to retire the hand-written inference</li></ol>
+<p>   block (behaviour-preserving).</p>
+<ol><li>Document the <code>[B, D]</code> output contract in each branch&#x27;s docstring (partially</li></ol>
+<p>   done) and consider a tuple/dict adapter for non-standard models.</p>
+<hr/><h2 id="appendix-source">Appendix A — Source Code (the 5 classes)</h2><p>Verbatim source of the five pipeline files under <code>phases/v4/src/v4/pipeline/</code>.</p><div class="filehdr">semantic.py &mdash; class SemanticEncoder</div><pre><code class="language-python">&quot;&quot;&quot;semantic.py — pluggable wrapper for the SEMANTIC branch.
+
+One class. The underlying model is INJECTED from the outside (never built
+here), and ``out_dim`` is inferred AUTOMATICALLY from that model so no
+dimension is ever hardcoded.
+
+Decoupling rule: this file must NOT import any of the other branch files
+(forensic_text, image_forensic, fusion). Only ``main_pipeline`` wires them.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from typing import Any
+
+import torch
+from torch import nn
+
+
+class SemanticEncoder(nn.Module):
+    &quot;&quot;&quot;Wraps any externally-built semantic model.
+
+    Args:
+        model:         an ``nn.Module`` built *outside* this class. Its
+                       ``forward`` is expected to return a ``Tensor`` of shape
+                       ``[B, out_dim]``.
+        example_input: an optional sample input (the exact object the model&#x27;s
+                       ``forward`` consumes — e.g. a dict of tensors). When
+                       given, ``out_dim`` is read from a probe forward (the
+                       source of truth). When omitted, ``out_dim`` falls back to
+                       a dimension attribute already exposed by the model.
+
+    Swapping the semantic model = construct a different ``model`` and pass it
+    here; nothing else in the pipeline changes.
+    &quot;&quot;&quot;
+
+    # attribute names a model may already expose that declare its output width
+    _DIM_ATTRS = (&quot;out_dim&quot;, &quot;output_dim&quot;, &quot;embed_dim&quot;, &quot;hidden_size&quot;)
+
+    def __init__(self, model: nn.Module, example_input: Any | None = None) -&gt; None:
+        super().__init__()
+        if not isinstance(model, nn.Module):
+            raise TypeError(
+                &quot;SemanticEncoder requires an nn.Module instance injected from &quot;
+                &quot;outside; do not build the model inside this class.&quot;
+            )
+        self.model = model
+        self._out_dim = self._infer_out_dim(example_input)
+
+    @property
+    def out_dim(self) -&gt; int:
+        &quot;&quot;&quot;Output width of the semantic vector — inferred, never hardcoded.&quot;&quot;&quot;
+        return self._out_dim
+
+    def forward(self, batch: Any) -&gt; torch.Tensor:
+        return self.model(batch)
+
+    # ------------------------------------------------------------------ #
+    # out_dim auto-inference                                              #
+    # ------------------------------------------------------------------ #
+    def _infer_out_dim(self, example_input: Any | None) -&gt; int:
+        if example_input is not None:
+            return int(self._probe(example_input).shape[-1])
+        for name in self._DIM_ATTRS:
+            value = getattr(self.model, name, None)
+            if isinstance(value, int) and value &gt; 0:
+                return value
+        raise ValueError(
+            &quot;Cannot infer out_dim for SemanticEncoder: pass example_input=... &quot;
+            f&quot;or expose one of {self._DIM_ATTRS} on the injected model.&quot;
+        )
+
+    def _probe(self, example_input: Any) -&gt; torch.Tensor:
+        param = next(self.model.parameters(), None)
+        device = param.device if param is not None else torch.device(&quot;cpu&quot;)
+        example_input = self._to_device(example_input, device)
+        was_training = self.model.training
+        self.model.eval()
+        try:
+            with torch.no_grad():
+                out = self.model(example_input)
+        finally:
+            self.model.train(was_training)
+        if not isinstance(out, torch.Tensor):
+            raise TypeError(
+                &quot;Semantic model must return a Tensor of shape [B, out_dim]; &quot;
+                f&quot;got {type(out).__name__}.&quot;
+            )
+        return out
+
+    @staticmethod
+    def _to_device(obj: Any, device: torch.device) -&gt; Any:
+        if isinstance(obj, torch.Tensor):
+            return obj.to(device)
+        if isinstance(obj, dict):
+            return {k: SemanticEncoder._to_device(v, device) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return type(obj)(SemanticEncoder._to_device(v, device) for v in obj)
+        return obj
+</code></pre><div class="filehdr">forensic_text.py &mdash; class ForensicTextEncoder</div><pre><code class="language-python">&quot;&quot;&quot;forensic_text.py — pluggable wrapper for the TEXT-FORENSIC branch.
+
+One class. The underlying model is INJECTED from the outside (never built
+here), and ``out_dim`` is inferred AUTOMATICALLY so no dimension is hardcoded.
+
+Decoupling rule: this file must NOT import any of the other branch files
+(semantic, image_forensic, fusion). Only ``main_pipeline`` wires them.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from typing import Any
+
+import torch
+from torch import nn
+
+
+class ForensicTextEncoder(nn.Module):
+    &quot;&quot;&quot;Wraps any externally-built text-forensic model.
+
+    Args:
+        model:         an ``nn.Module`` built *outside* this class returning a
+                       ``Tensor`` of shape ``[B, out_dim]``.
+        example_input: optional sample input used once to probe ``out_dim``
+                       (source of truth). If omitted, falls back to a dimension
+                       attribute exposed by the model.
+
+    ``forward(batch)`` is the cached/training path. ``forward_text(text)`` is an
+    optional runtime path that delegates to the model&#x27;s ``runtime_forward`` if
+    it provides one (useful for raw-text inference); it is never used to probe
+    ``out_dim`` so heavy backbones are not triggered at construction time.
+
+    Swapping the text model = construct a different ``model`` and pass it here.
+    &quot;&quot;&quot;
+
+    _DIM_ATTRS = (&quot;out_dim&quot;, &quot;output_dim&quot;, &quot;embed_dim&quot;, &quot;hidden_size&quot;)
+
+    def __init__(self, model: nn.Module, example_input: Any | None = None) -&gt; None:
+        super().__init__()
+        if not isinstance(model, nn.Module):
+            raise TypeError(
+                &quot;ForensicTextEncoder requires an nn.Module instance injected &quot;
+                &quot;from outside; do not build the model inside this class.&quot;
+            )
+        self.model = model
+        self._out_dim = self._infer_out_dim(example_input)
+
+    @property
+    def out_dim(self) -&gt; int:
+        &quot;&quot;&quot;Output width of the text-forensic vector — inferred, never hardcoded.&quot;&quot;&quot;
+        return self._out_dim
+
+    def forward(self, batch: Any) -&gt; torch.Tensor:
+        return self.model(batch)
+
+    def forward_text(self, text: Any) -&gt; torch.Tensor:
+        &quot;&quot;&quot;Runtime path for raw text, if the injected model supports it.&quot;&quot;&quot;
+        runtime = getattr(self.model, &quot;runtime_forward&quot;, None)
+        if not callable(runtime):
+            raise AttributeError(
+                &quot;Injected text model exposes no &#x27;runtime_forward&#x27;; use &quot;
+                &quot;forward(batch) with precomputed features instead.&quot;
+            )
+        return runtime(text)
+
+    # ------------------------------------------------------------------ #
+    # out_dim auto-inference                                              #
+    # ------------------------------------------------------------------ #
+    def _infer_out_dim(self, example_input: Any | None) -&gt; int:
+        if example_input is not None:
+            return int(self._probe(example_input).shape[-1])
+        for name in self._DIM_ATTRS:
+            value = getattr(self.model, name, None)
+            if isinstance(value, int) and value &gt; 0:
+                return value
+        raise ValueError(
+            &quot;Cannot infer out_dim for ForensicTextEncoder: pass example_input=... &quot;
+            f&quot;or expose one of {self._DIM_ATTRS} on the injected model.&quot;
+        )
+
+    def _probe(self, example_input: Any) -&gt; torch.Tensor:
+        param = next(self.model.parameters(), None)
+        device = param.device if param is not None else torch.device(&quot;cpu&quot;)
+        example_input = self._to_device(example_input, device)
+        was_training = self.model.training
+        self.model.eval()
+        try:
+            with torch.no_grad():
+                out = self.model(example_input)
+        finally:
+            self.model.train(was_training)
+        if not isinstance(out, torch.Tensor):
+            raise TypeError(
+                &quot;Text model must return a Tensor of shape [B, out_dim]; &quot;
+                f&quot;got {type(out).__name__}.&quot;
+            )
+        return out
+
+    @staticmethod
+    def _to_device(obj: Any, device: torch.device) -&gt; Any:
+        if isinstance(obj, torch.Tensor):
+            return obj.to(device)
+        if isinstance(obj, dict):
+            return {k: ForensicTextEncoder._to_device(v, device) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return type(obj)(ForensicTextEncoder._to_device(v, device) for v in obj)
+        return obj
+</code></pre><div class="filehdr">image_forensic.py &mdash; class ImageForensicEncoder</div><pre><code class="language-python">&quot;&quot;&quot;image_forensic.py — pluggable wrapper for the IMAGE-FORENSIC branch.
+
+One class. The underlying model is INJECTED from the outside (never built
+here), and ``out_dim`` is inferred AUTOMATICALLY so no dimension is hardcoded.
+
+Decoupling rule: this file must NOT import any of the other branch files
+(semantic, forensic_text, fusion). Only ``main_pipeline`` wires them.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from typing import Any
+
+import torch
+from torch import nn
+
+
+class ImageForensicEncoder(nn.Module):
+    &quot;&quot;&quot;Wraps any externally-built image-forensic model.
+
+    Args:
+        model:         an ``nn.Module`` built *outside* this class returning a
+                       ``Tensor`` of shape ``[B, out_dim]``.
+        example_input: optional sample input used once to probe ``out_dim``
+                       (source of truth). If omitted, falls back to a dimension
+                       attribute exposed by the model.
+
+    Swapping the image model = construct a different ``model`` and pass it here;
+    nothing else in the pipeline changes.
+    &quot;&quot;&quot;
+
+    _DIM_ATTRS = (&quot;out_dim&quot;, &quot;output_dim&quot;, &quot;embed_dim&quot;, &quot;hidden_size&quot;)
+
+    def __init__(self, model: nn.Module, example_input: Any | None = None) -&gt; None:
+        super().__init__()
+        if not isinstance(model, nn.Module):
+            raise TypeError(
+                &quot;ImageForensicEncoder requires an nn.Module instance injected &quot;
+                &quot;from outside; do not build the model inside this class.&quot;
+            )
+        self.model = model
+        self._out_dim = self._infer_out_dim(example_input)
+
+    @property
+    def out_dim(self) -&gt; int:
+        &quot;&quot;&quot;Output width of the image-forensic vector — inferred, never hardcoded.&quot;&quot;&quot;
+        return self._out_dim
+
+    def forward(self, batch: Any) -&gt; torch.Tensor:
+        return self.model(batch)
+
+    # ------------------------------------------------------------------ #
+    # out_dim auto-inference                                              #
+    # ------------------------------------------------------------------ #
+    def _infer_out_dim(self, example_input: Any | None) -&gt; int:
+        if example_input is not None:
+            return int(self._probe(example_input).shape[-1])
+        for name in self._DIM_ATTRS:
+            value = getattr(self.model, name, None)
+            if isinstance(value, int) and value &gt; 0:
+                return value
+        raise ValueError(
+            &quot;Cannot infer out_dim for ImageForensicEncoder: pass example_input=... &quot;
+            f&quot;or expose one of {self._DIM_ATTRS} on the injected model.&quot;
+        )
+
+    def _probe(self, example_input: Any) -&gt; torch.Tensor:
+        param = next(self.model.parameters(), None)
+        device = param.device if param is not None else torch.device(&quot;cpu&quot;)
+        example_input = self._to_device(example_input, device)
+        was_training = self.model.training
+        self.model.eval()
+        try:
+            with torch.no_grad():
+                out = self.model(example_input)
+        finally:
+            self.model.train(was_training)
+        if not isinstance(out, torch.Tensor):
+            raise TypeError(
+                &quot;Image model must return a Tensor of shape [B, out_dim]; &quot;
+                f&quot;got {type(out).__name__}.&quot;
+            )
+        return out
+
+    @staticmethod
+    def _to_device(obj: Any, device: torch.device) -&gt; Any:
+        if isinstance(obj, torch.Tensor):
+            return obj.to(device)
+        if isinstance(obj, dict):
+            return {k: ImageForensicEncoder._to_device(v, device) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return type(obj)(ImageForensicEncoder._to_device(v, device) for v in obj)
+        return obj
+</code></pre><div class="filehdr">fusion.py &mdash; class FusionModule</div><pre><code class="language-python">&quot;&quot;&quot;fusion.py — pluggable wrapper for the FUSION stage.
+
+One class. The fusion model is INJECTED from the outside (never built here),
+and ``out_dim`` is inferred AUTOMATICALLY so no dimension is hardcoded.
+
+The fusion model consumes a feature dict (one entry per encoder branch) and may
+return either a bare ``Tensor`` or a dict (e.g. ``{&quot;main_logits&quot;, &quot;aux_logits&quot;,
+&quot;fused&quot;}``). For a dict, ``out_dim`` is taken from the entry named ``out_key``.
+
+Decoupling rule: this file must NOT import any of the other branch files
+(semantic, forensic_text, image_forensic). Only ``main_pipeline`` wires them.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from typing import Any
+
+import torch
+from torch import nn
+
+
+class FusionModule(nn.Module):
+    &quot;&quot;&quot;Wraps any externally-built fusion model.
+
+    Args:
+        model:            an ``nn.Module`` built *outside* this class (the
+                          orchestrator builds it using the encoders&#x27; ``out_dim``
+                          so its input widths are never hardcoded either).
+        example_features: optional sample feature dict used once to probe
+                          ``out_dim`` (source of truth). Build it with batch
+                          size &gt;= 2 so layers like ``BatchNorm1d`` survive the
+                          probe. If omitted, falls back to a dimension attribute.
+        out_key:          which output entry defines ``out_dim`` when the model
+                          returns a dict (default ``&quot;main_logits&quot;``).
+
+    Swapping the fusion model = construct a different ``model`` and pass it here.
+    &quot;&quot;&quot;
+
+    _DIM_ATTRS = (&quot;out_dim&quot;, &quot;output_dim&quot;, &quot;num_classes&quot;)
+
+    def __init__(
+        self,
+        model: nn.Module,
+        example_features: Any | None = None,
+        out_key: str = &quot;main_logits&quot;,
+    ) -&gt; None:
+        super().__init__()
+        if not isinstance(model, nn.Module):
+            raise TypeError(
+                &quot;FusionModule requires an nn.Module instance injected from &quot;
+                &quot;outside; do not build the model inside this class.&quot;
+            )
+        self.model = model
+        self.out_key = out_key
+        self._out_dim = self._infer_out_dim(example_features)
+
+    @property
+    def out_dim(self) -&gt; int:
+        &quot;&quot;&quot;Width of the fusion&#x27;s primary output — inferred, never hardcoded.&quot;&quot;&quot;
+        return self._out_dim
+
+    def forward(self, features: Any) -&gt; Any:
+        return self.model(features)
+
+    # ------------------------------------------------------------------ #
+    # out_dim auto-inference                                              #
+    # ------------------------------------------------------------------ #
+    def _infer_out_dim(self, example_features: Any | None) -&gt; int:
+        if example_features is not None:
+            return int(self._select(self._probe(example_features)).shape[-1])
+        for name in self._DIM_ATTRS:
+            value = getattr(self.model, name, None)
+            if isinstance(value, int) and value &gt; 0:
+                return value
+        raise ValueError(
+            &quot;Cannot infer out_dim for FusionModule: pass example_features=... &quot;
+            f&quot;or expose one of {self._DIM_ATTRS} on the injected model.&quot;
+        )
+
+    def _select(self, out: Any) -&gt; torch.Tensor:
+        if isinstance(out, torch.Tensor):
+            return out
+        if isinstance(out, dict):
+            if self.out_key in out and isinstance(out[self.out_key], torch.Tensor):
+                return out[self.out_key]
+            for value in out.values():
+                if isinstance(value, torch.Tensor):
+                    return value
+        raise TypeError(
+            &quot;Fusion model output must be a Tensor or a dict containing at least &quot;
+            f&quot;one Tensor (looked for key {self.out_key!r}).&quot;
+        )
+
+    def _probe(self, example_features: Any) -&gt; Any:
+        param = next(self.model.parameters(), None)
+        device = param.device if param is not None else torch.device(&quot;cpu&quot;)
+        example_features = self._to_device(example_features, device)
+        was_training = self.model.training
+        self.model.eval()
+        try:
+            with torch.no_grad():
+                out = self.model(example_features)
+        finally:
+            self.model.train(was_training)
+        return out
+
+    @staticmethod
+    def _to_device(obj: Any, device: torch.device) -&gt; Any:
+        if isinstance(obj, torch.Tensor):
+            return obj.to(device)
+        if isinstance(obj, dict):
+            return {k: FusionModule._to_device(v, device) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return type(obj)(FusionModule._to_device(v, device) for v in obj)
+        return obj
+</code></pre><div class="filehdr">main_pipeline.py &mdash; class MainPipeline</div><pre><code class="language-python">&quot;&quot;&quot;main_pipeline.py — the ONLY orchestrator.
+
+This is the single file allowed to import the four branch wrappers. It links
+them together and manages the data flow. The four wrappers never import each
+other; all wiring (including reading each encoder&#x27;s ``out_dim`` and using those
+to build the fusion model) happens here.
+
+Run directly to see an end-to-end demo with dummy models::
+
+    python main_pipeline.py
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from typing import Any, Callable
+
+import torch
+from torch import nn
+
+# The orchestrator (and ONLY the orchestrator) imports the four wrappers.
+# Relative imports for package use; absolute fallback so the file also runs as
+# a standalone script for the demo below.
+try:
+    from .semantic import SemanticEncoder
+    from .forensic_text import ForensicTextEncoder
+    from .image_forensic import ImageForensicEncoder
+    from .fusion import FusionModule
+except ImportError:  # running as a plain script
+    from semantic import SemanticEncoder
+    from forensic_text import ForensicTextEncoder
+    from image_forensic import ImageForensicEncoder
+    from fusion import FusionModule
+
+
+class MainPipeline(nn.Module):
+    &quot;&quot;&quot;Links the four pluggable branches and runs the forward pass.
+
+    Construct it either from ready-made wrappers (canonical) or, for
+    convenience, from raw models via :meth:`from_models` (which builds the
+    wrappers, reads the encoder ``out_dim`` values, and uses them to build the
+    fusion model — so no dimension is ever hardcoded).
+
+    Args:
+        semantic / image / text: the three encoder wrappers.
+        fusion:                  the fusion wrapper.
+        feature_keys:            keys under which the three encoder outputs are
+                                 placed in the feature dict handed to fusion.
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        semantic: SemanticEncoder,
+        image: ImageForensicEncoder,
+        text: ForensicTextEncoder,
+        fusion: FusionModule,
+        feature_keys: tuple[str, str, str] = (&quot;v_semantic&quot;, &quot;v_imgfor&quot;, &quot;v_textfor&quot;),
+    ) -&gt; None:
+        super().__init__()
+        self.semantic = semantic
+        self.image = image
+        self.text = text
+        self.fusion = fusion
+        self.k_sem, self.k_img, self.k_txt = feature_keys
+
+    @property
+    def out_dim(self) -&gt; int:
+        &quot;&quot;&quot;Final output width of the pipeline (delegates to the fusion).&quot;&quot;&quot;
+        return self.fusion.out_dim
+
+    @property
+    def encoder_dims(self) -&gt; dict[str, int]:
+        &quot;&quot;&quot;Per-branch output widths, read automatically from each wrapper.&quot;&quot;&quot;
+        return {
+            self.k_sem: self.semantic.out_dim,
+            self.k_img: self.image.out_dim,
+            self.k_txt: self.text.out_dim,
+        }
+
+    def forward(self, batch: Any, text: Any | None = None) -&gt; Any:
+        &quot;&quot;&quot;Run the three branches, then fuse.
+
+        Each wrapper picks the keys it needs from ``batch``, so a single merged
+        batch dict can drive all three. If ``text`` (raw text) is given, the
+        text branch uses its runtime path instead of cached features.
+        &quot;&quot;&quot;
+        features = {
+            self.k_sem: self.semantic(batch),
+            self.k_img: self.image(batch),
+            self.k_txt: self.text.forward_text(text) if text is not None else self.text(batch),
+        }
+        return self.fusion(features)
+
+    # ------------------------------------------------------------------ #
+    # convenience factory: build wrappers + fusion from raw models        #
+    # ------------------------------------------------------------------ #
+    @classmethod
+    def from_models(
+        cls,
+        *,
+        semantic_model: nn.Module,
+        image_model: nn.Module,
+        text_model: nn.Module,
+        fusion_builder: Callable[[int, int, int], nn.Module],
+        semantic_example: Any | None = None,
+        image_example: Any | None = None,
+        text_example: Any | None = None,
+        feature_keys: tuple[str, str, str] = (&quot;v_semantic&quot;, &quot;v_imgfor&quot;, &quot;v_textfor&quot;),
+        probe_batch: int = 2,
+    ) -&gt; &quot;MainPipeline&quot;:
+        &quot;&quot;&quot;Build the whole pipeline from raw models.
+
+        ``fusion_builder(d_sem, d_img, d_txt) -&gt; nn.Module`` receives the three
+        encoder output widths (inferred automatically) and returns the fusion
+        model — this is how the fusion&#x27;s input dims flow from the encoders
+        without any hardcoded numbers.
+        &quot;&quot;&quot;
+        semantic = SemanticEncoder(semantic_model, semantic_example)
+        image = ImageForensicEncoder(image_model, image_example)
+        text = ForensicTextEncoder(text_model, text_example)
+
+        fusion_model = fusion_builder(semantic.out_dim, image.out_dim, text.out_dim)
+        example_features = {
+            feature_keys[0]: torch.zeros(probe_batch, semantic.out_dim),
+            feature_keys[1]: torch.zeros(probe_batch, image.out_dim),
+            feature_keys[2]: torch.zeros(probe_batch, text.out_dim),
+        }
+        fusion = FusionModule(fusion_model, example_features)
+        return cls(semantic, image, text, fusion, feature_keys)
+
+
+# ---------------------------------------------------------------------- #
+# Demo: dummy models prove the wiring without any real backbones.         #
+# ---------------------------------------------------------------------- #
+def _demo() -&gt; None:
+    class _DummyEncoder(nn.Module):
+        &quot;&quot;&quot;Reads one key from the batch dict and projects it — no declared dim.&quot;&quot;&quot;
+
+        def __init__(self, key: str, in_features: int, out_features: int) -&gt; None:
+            super().__init__()
+            self.key = key
+            self.proj = nn.Linear(in_features, out_features)
+
+        def forward(self, batch: dict) -&gt; torch.Tensor:
+            return self.proj(batch[self.key])
+
+    class _DummyTextEncoder(_DummyEncoder):
+        def runtime_forward(self, text: list[str]) -&gt; torch.Tensor:  # raw-text path
+            x = torch.zeros(len(text), self.proj.in_features)
+            return self.proj(x)
+
+    class _DummyFusion(nn.Module):
+        &quot;&quot;&quot;Concatenates the three branch features and classifies — dims injected.&quot;&quot;&quot;
+
+        def __init__(self, d_sem: int, d_img: int, d_txt: int, num_classes: int = 5) -&gt; None:
+            super().__init__()
+            self.head = nn.Sequential(
+                nn.Linear(d_sem + d_img + d_txt, 64),
+                nn.BatchNorm1d(64),  # needs batch &gt;= 2 at probe time
+                nn.GELU(),
+                nn.Linear(64, num_classes),
+            )
+            self.aux = nn.Linear(d_img, 2)
+
+        def forward(self, features: dict) -&gt; dict:
+            fused = torch.cat(
+                [features[&quot;v_semantic&quot;], features[&quot;v_imgfor&quot;], features[&quot;v_textfor&quot;]], dim=-1
+            )
+            return {&quot;main_logits&quot;: self.head(fused), &quot;aux_logits&quot;: self.aux(features[&quot;v_imgfor&quot;])}
+
+    # --- build raw models OUTSIDE, with arbitrary (different) widths ---
+    sem_model = _DummyEncoder(&quot;x_sem&quot;, in_features=16, out_features=768)
+    img_model = _DummyEncoder(&quot;v_imgfor_dct&quot;, in_features=8, out_features=512)
+    txt_model = _DummyTextEncoder(&quot;x_txt&quot;, in_features=32, out_features=256)
+
+    # example inputs let each wrapper probe its out_dim automatically
+    pipeline = MainPipeline.from_models(
+        semantic_model=sem_model,
+        image_model=img_model,
+        text_model=txt_model,
+        fusion_builder=lambda d_sem, d_img, d_txt: _DummyFusion(d_sem, d_img, d_txt),
+        semantic_example={&quot;x_sem&quot;: torch.zeros(2, 16)},
+        image_example={&quot;v_imgfor_dct&quot;: torch.zeros(2, 8)},
+        text_example={&quot;x_txt&quot;: torch.zeros(2, 32)},
+    )
+
+    print(&quot;encoder_dims (auto-inferred):&quot;, pipeline.encoder_dims)
+    print(&quot;pipeline.out_dim (auto-inferred):&quot;, pipeline.out_dim)
+
+    batch = {
+        &quot;x_sem&quot;: torch.randn(4, 16),
+        &quot;v_imgfor_dct&quot;: torch.randn(4, 8),
+        &quot;x_txt&quot;: torch.randn(4, 32),
+    }
+    pipeline.eval()
+    out = pipeline(batch)
+    print(&quot;main_logits shape:&quot;, tuple(out[&quot;main_logits&quot;].shape))
+    print(&quot;aux_logits shape: &quot;, tuple(out[&quot;aux_logits&quot;].shape))
+
+    # runtime text path
+    out_rt = pipeline(batch, text=[&quot;hello&quot;, &quot;world&quot;, &quot;foo&quot;, &quot;bar&quot;])
+    print(&quot;runtime main_logits shape:&quot;, tuple(out_rt[&quot;main_logits&quot;].shape))
+
+
+if __name__ == &quot;__main__&quot;:
+    _demo()
+</code></pre>
+</body>
+</html>
